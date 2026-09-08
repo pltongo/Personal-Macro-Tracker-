@@ -1,98 +1,91 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MacroTracker Pro - Standalone Playtest</title>
+  <title>Daily Macro Tracker</title>
   <style>
     :root {
-      --bg-primary: #0f172a; --bg-secondary: #1e293b; --bg-card: #1e293b; --bg-hover: #334155;
-      --text-primary: #f8fafc; --text-secondary: #94a3b8; --text-muted: #64748b; --border-color: #334155;
-      --accent-protein: #38bdf8; --accent-carbs: #fbbf24; --accent-fat: #f87171;
-      --accent-sodium: #c084fc; --accent-fiber: #34d399; --accent-calories: #f97316;
-      --primary-btn: #3b82f6; --success: #10b981; --danger: #ef4444; --radius: 12px;
-      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    [data-theme="light"] {
-      --bg-primary: #f8fafc; --bg-secondary: #ffffff; --bg-card: #ffffff; --bg-hover: #f1f5f9;
-      --text-primary: #0f172a; --text-secondary: #475569; --text-muted: #94a3b8; --border-color: #e2e8f0;
-      --accent-protein: #0284c7; --accent-carbs: #d97706; --accent-fat: #dc2626;
-      --accent-sodium: #9333ea; --accent-fiber: #059669; --accent-calories: #ea580c;
+      --bg-primary: #000000; --bg-secondary: #0a0a0a; --bg-card: #0d0d0d; --bg-hover: #171717;
+      --text-primary: #ffffff; --text-secondary: #a3a3a3; --text-muted: #525252;
+      --border-color: #262626; --primary-btn: #262626; --success: #10b981; --danger: #ef4444;
+      --radius: 10px; --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: var(--font-sans); background-color: var(--bg-primary); color: var(--text-primary); line-height: 1.5; padding-bottom: 80px; }
-    .app-header { background-color: var(--bg-secondary); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 100; padding: 12px 16px; }
-    .header-container { max-width: 1000px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .brand { display: flex; align-items: center; gap: 10px; font-size: 1.2rem; font-weight: 700; }
-    .nav-tabs { display: flex; background-color: var(--bg-primary); padding: 4px; border-radius: 10px; gap: 4px; border: 1px solid var(--border-color); }
-    .nav-btn { background: transparent; border: none; color: var(--text-secondary); padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
-    .nav-btn.active { background-color: var(--bg-card); color: var(--text-primary); }
-    .main-content { max-width: 1000px; margin: 20px auto; padding: 0 16px; }
-    .date-bar { display: flex; align-items: center; justify-content: space-between; background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-    .icon-btn { background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-weight: 600; }
-    .macro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
-    .macro-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 12px; position: relative; overflow: hidden; }
-    .macro-card::before { content: ""; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
-    .macro-card.calories::before { background-color: var(--accent-calories); }
-    .macro-card.protein::before { background-color: var(--accent-protein); }
-    .macro-card.carbs::before { background-color: var(--accent-carbs); }
-    .macro-card.fat::before { background-color: var(--accent-fat); }
-    .macro-card.sodium::before { background-color: var(--accent-sodium); }
-    .macro-card.fiber::before { background-color: var(--accent-fiber); }
+    .app-header { background-color: var(--bg-primary); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 100; padding: 12px 16px; }
+    .header-container { max-width: 1000px; margin: 0 auto; display: flex; align-items: center; justify-content: center; }
+    .nav-tabs { display: flex; background-color: #0d0d0d; padding: 4px; border-radius: var(--radius); gap: 4px; border: 1px solid var(--border-color); }
+    .nav-btn { background: transparent; border: none; color: var(--text-secondary); padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .nav-btn.active { background-color: #1f1f1f; color: var(--text-primary); }
+    .main-content { max-width: 1000px; margin: 24px auto; padding: 0 16px; }
+    .date-bar { display: flex; align-items: center; justify-content: space-between; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 12px 18px; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+    .date-display { font-size: 1.2rem; font-weight: 700; color: var(--text-primary); }
+    .date-controls { display: flex; align-items: center; gap: 8px; }
+    .icon-btn { background: #141414; border: 1px solid var(--border-color); color: var(--text-primary); padding: 7px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+    .date-picker-input { background: #141414; border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: 8px; font-family: inherit; font-size: 0.9rem; cursor: pointer; }
+    .macro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .macro-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 6px; }
     .macro-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); }
-    .macro-val { font-size: 1.3rem; font-weight: 800; margin: 4px 0; }
+    .macro-val { font-size: 1.4rem; font-weight: 800; margin: 4px 0; color: #ffffff; }
     .macro-target { font-size: 0.75rem; color: var(--text-muted); }
-    .progress-track { background-color: var(--bg-primary); height: 5px; border-radius: 3px; overflow: hidden; margin-top: 4px; }
-    .progress-fill { height: 100%; border-radius: 3px; }
-    .card-section { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 18px; margin-bottom: 20px; }
-    .section-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
-    .form-textarea { width: 100%; background-color: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 8px; font-family: inherit; font-size: 0.95rem; resize: vertical; min-height: 70px; margin-bottom: 12px; }
-    .btn-primary { background-color: var(--primary-btn); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; }
-    .btn-secondary { background-color: var(--bg-hover); color: var(--text-primary); border: 1px solid var(--border-color); padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; }
-    .meal-item { display: flex; justify-content: space-between; align-items: center; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
-    .badge { padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: rgba(255,255,255,0.08); }
-    .toast { position: fixed; bottom: 20px; right: 20px; background-color: var(--success); color: white; padding: 10px 18px; border-radius: 8px; font-weight: 600; display: none; z-index: 999; }
+    .progress-track { background-color: #171717; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+    .progress-fill { height: 100%; border-radius: 3px; background-color: var(--danger); transition: width 0.3s ease, background-color 0.3s ease; }
+    .progress-fill.goal-met { background-color: var(--success) !important; }
+    .card-section { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 20px; margin-bottom: 24px; }
+    .section-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .form-textarea { width: 100%; background-color: #121212; border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px; border-radius: 8px; font-family: inherit; font-size: 0.95rem; resize: vertical; min-height: 70px; margin-bottom: 12px; }
+    .btn-primary { background-color: #262626; color: white; border: 1px solid #404040; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-success { background-color: #065f46; color: white; border: 1px solid #059669; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .meal-item { display: flex; justify-content: space-between; align-items: center; background-color: #121212; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
+    .badge { padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: #1f1f1f; color: #e5e5e5; border: 1px solid #333333; }
+    .toast { position: fixed; bottom: 20px; right: 20px; background-color: var(--success); color: white; padding: 12px 20px; border-radius: 8px; font-weight: 600; display: none; z-index: 999; }
+    .goal-preview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 14px 0; }
+    .goal-stat { background: #121212; border: 1px solid #262626; padding: 12px; border-radius: 8px; text-align: center; }
+    .goal-stat-label { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; }
+    .goal-stat-val { font-size: 1.25rem; font-weight: 800; color: #ffffff; margin-top: 4px; }
     @media (max-width: 640px) {
-      .nav-tabs { position: fixed; bottom: 0; left: 0; right: 0; border-radius: 0; justify-content: space-around; padding: 8px; z-index: 100; background-color: var(--bg-secondary); }
+      .nav-tabs { position: fixed; bottom: 0; left: 0; right: 0; border-radius: 0; justify-content: space-around; padding: 8px; z-index: 100; background-color: #0d0d0d; }
+      .date-bar { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
 <body>
   <header class="app-header">
     <div class="header-container">
-      <div class="brand"><span>🥗</span><span>MacroTracker Playtest</span></div>
       <nav class="nav-tabs">
-        <button class="nav-btn active" onclick="switchTab('daily')">Daily Log</button>
+        <button class="nav-btn active" onclick="switchTab('daily')">Daily Tracker</button>
         <button class="nav-btn" onclick="switchTab('weekly')">Weekly Averages</button>
-        <button class="nav-btn" onclick="switchTab('settings')">Settings</button>
+        <button class="nav-btn" onclick="switchTab('coach')">Goal Coach</button>
+        <button class="nav-btn" onclick="switchTab('settings')">Custom Goals</button>
       </nav>
-      <button class="icon-btn" onclick="toggleTheme()">☀️/🌙</button>
     </div>
   </header>
 
   <main class="main-content">
     <div id="tab-daily">
       <div class="date-bar">
-        <div style="display:flex;gap:8px;">
+        <div id="date-label" class="date-display"></div>
+        <div class="date-controls">
           <button class="icon-btn" onclick="changeDay(-1)">◀</button>
           <button class="icon-btn" onclick="setToday()">Today</button>
           <button class="icon-btn" onclick="changeDay(1)">▶</button>
+          <input type="date" id="date-picker" class="date-picker-input" onchange="pickDate(this.value)">
         </div>
-        <div id="date-label" style="font-weight:700;"></div>
       </div>
 
       <div class="macro-grid">
-        <div class="macro-card calories"><div class="macro-title">Calories</div><div class="macro-val" id="cal-val">0 kcal</div><div class="macro-target" id="cal-goal"></div><div class="progress-track"><div class="progress-fill" id="cal-bar" style="background:#f97316;width:0%"></div></div></div>
-        <div class="macro-card protein"><div class="macro-title">Protein</div><div class="macro-val" id="p-val">0 g</div><div class="macro-target" id="p-goal"></div><div class="progress-track"><div class="progress-fill" id="p-bar" style="background:#38bdf8;width:0%"></div></div></div>
-        <div class="macro-card carbs"><div class="macro-title">Carbs</div><div class="macro-val" id="c-val">0 g</div><div class="macro-target" id="c-goal"></div><div class="progress-track"><div class="progress-fill" id="c-bar" style="background:#fbbf24;width:0%"></div></div></div>
-        <div class="macro-card fat"><div class="macro-title">Fat</div><div class="macro-val" id="f-val">0 g</div><div class="macro-target" id="f-goal"></div><div class="progress-track"><div class="progress-fill" id="f-bar" style="background:#f87171;width:0%"></div></div></div>
-        <div class="macro-card sodium"><div class="macro-title">Sodium</div><div class="macro-val" id="na-val">0 mg</div><div class="macro-target" id="na-goal"></div><div class="progress-track"><div class="progress-fill" id="na-bar" style="background:#c084fc;width:0%"></div></div></div>
-        <div class="macro-card fiber"><div class="macro-title">Fiber</div><div class="macro-val" id="fib-val">0 g</div><div class="macro-target" id="fib-goal"></div><div class="progress-track"><div class="progress-fill" id="fib-bar" style="background:#34d399;width:0%"></div></div></div>
+        <div class="macro-card"><div class="macro-title">Calories</div><div class="macro-val" id="cal-val">0 kcal</div><div class="macro-target" id="cal-goal"></div><div class="progress-track"><div class="progress-fill" id="cal-bar" style="width:0%"></div></div></div>
+        <div class="macro-card"><div class="macro-title">Protein</div><div class="macro-val" id="p-val">0 g</div><div class="macro-target" id="p-goal"></div><div class="progress-track"><div class="progress-fill" id="p-bar" style="width:0%"></div></div></div>
+        <div class="macro-card"><div class="macro-title">Carbs</div><div class="macro-val" id="c-val">0 g</div><div class="macro-target" id="c-goal"></div><div class="progress-track"><div class="progress-fill" id="c-bar" style="width:0%"></div></div></div>
+        <div class="macro-card"><div class="macro-title">Fat</div><div class="macro-val" id="f-val">0 g</div><div class="macro-target" id="f-goal"></div><div class="progress-track"><div class="progress-fill" id="f-bar" style="width:0%"></div></div></div>
+        <div class="macro-card"><div class="macro-title">Sodium</div><div class="macro-val" id="na-val">0 mg</div><div class="macro-target" id="na-goal"></div><div class="progress-track"><div class="progress-fill" id="na-bar" style="width:0%"></div></div></div>
+        <div class="macro-card"><div class="macro-title">Fiber</div><div class="macro-val" id="fib-val">0 g</div><div class="macro-target" id="fib-goal"></div><div class="progress-track"><div class="progress-fill" id="fib-bar" style="width:0%"></div></div></div>
       </div>
 
       <div class="card-section">
         <div class="section-title">
-          <span>Quick Log Meal</span>
+          <span>Log Meal</span>
           <select id="meal-type" class="icon-btn" style="padding:4px 8px;">
             <option value="Breakfast">Breakfast</option>
             <option value="Lunch" selected>Lunch</option>
@@ -121,10 +114,54 @@
       </div>
     </div>
 
+    <div id="tab-coach" style="display:none;">
+      <div class="card-section">
+        <div class="section-title"><span>Goal Coach & Target Generator</span></div>
+        <p style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:16px;">
+          Set your objective to automatically calculate tailored macronutrient targets, then click <strong>"Apply to Custom Goals"</strong> to update your tracker.
+        </p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;">
+          <div>
+            <label style="font-size:0.8rem;color:var(--text-secondary);">Goal</label>
+            <select id="coach-goal" class="icon-btn" style="width:100%;margin-top:4px;">
+              <option value="lean_bulk">Lean Muscle Bulk (+250 kcal)</option>
+              <option value="aggressive_bulk">Aggressive Mass Gain (+500 kcal)</option>
+              <option value="maintenance">Maintenance / Recomp (0 kcal)</option>
+              <option value="moderate_cut" selected>Moderate Fat Loss (-350 kcal)</option>
+              <option value="aggressive_cut">Aggressive Cut (-500 kcal)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.8rem;color:var(--text-secondary);">Body Weight (lbs)</label>
+            <input type="number" id="coach-weight" class="icon-btn" style="width:100%;margin-top:4px;" value="175">
+          </div>
+          <div>
+            <label style="font-size:0.8rem;color:var(--text-secondary);">Activity Level</label>
+            <select id="coach-act" class="icon-btn" style="width:100%;margin-top:4px;">
+              <option value="athlete" selected>Very Active (Lifting + Running)</option>
+              <option value="moderate">Moderate (3-5 workouts/wk)</option>
+              <option value="sedentary">Sedentary</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="calcCoach()">⚡ Calculate Targets</button>
+
+        <div class="goal-preview-grid" id="coach-preview">
+          <div class="goal-stat"><div class="goal-stat-label">Calories</div><div class="goal-stat-val" id="c-res-cal">2400</div></div>
+          <div class="goal-stat"><div class="goal-stat-label">Protein</div><div class="goal-stat-val" id="c-res-p">175g</div></div>
+          <div class="goal-stat"><div class="goal-stat-label">Carbs</div><div class="goal-stat-val" id="c-res-c">260g</div></div>
+          <div class="goal-stat"><div class="goal-stat-label">Fat</div><div class="goal-stat-val" id="c-res-f">70g</div></div>
+          <div class="goal-stat"><div class="goal-stat-label">Sodium</div><div class="goal-stat-val" id="c-res-na">2300mg</div></div>
+          <div class="goal-stat"><div class="goal-stat-label">Fiber</div><div class="goal-stat-val" id="c-res-fib">35g</div></div>
+        </div>
+        <button class="btn-success" onclick="applyCoach()">✅ Apply to Custom Goals</button>
+      </div>
+    </div>
+
     <div id="tab-settings" style="display:none;">
       <div class="card-section">
         <div class="section-title"><span>Custom Macro Goals</span></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
           <div><label style="font-size:0.8rem;color:var(--text-secondary);">Calories (kcal)</label><input type="number" id="cfg-cal" class="form-textarea" style="min-height:40px;"></div>
           <div><label style="font-size:0.8rem;color:var(--text-secondary);">Protein (g)</label><input type="number" id="cfg-p" class="form-textarea" style="min-height:40px;"></div>
           <div><label style="font-size:0.8rem;color:var(--text-secondary);">Carbs (g)</label><input type="number" id="cfg-c" class="form-textarea" style="min-height:40px;"></div>
@@ -132,7 +169,7 @@
           <div><label style="font-size:0.8rem;color:var(--text-secondary);">Sodium (mg)</label><input type="number" id="cfg-na" class="form-textarea" style="min-height:40px;"></div>
           <div><label style="font-size:0.8rem;color:var(--text-secondary);">Fiber (g)</label><input type="number" id="cfg-fib" class="form-textarea" style="min-height:40px;"></div>
         </div>
-        <button class="btn-primary" onclick="saveSettings()">💾 Save Goals</button>
+        <button class="btn-success" onclick="saveSettings()">💾 Save Goals</button>
       </div>
     </div>
   </main>
@@ -140,44 +177,50 @@
 
   <script>
     const DB = {
-      'chicken breast': { cal: 165, p: 31, c: 0, f: 3.6, na: 74, fib: 0, u: '100g' },
-      'beef': { cal: 215, p: 22, c: 0, f: 14, na: 60, fib: 0, u: '100g' },
-      'steak': { cal: 240, p: 25, c: 0, f: 15, na: 58, fib: 0, u: '100g' },
-      'salmon': { cal: 208, p: 20, c: 0, f: 13, na: 59, fib: 0, u: '100g' },
-      'egg': { cal: 72, p: 6.3, c: 0.4, f: 4.8, na: 71, fib: 0, u: 'large' },
-      'rice': { cal: 205, p: 4.2, c: 44.5, f: 0.4, na: 0, fib: 0.6, u: 'cup' },
-      'white rice': { cal: 205, p: 4.2, c: 44.5, f: 0.4, na: 0, fib: 0.6, u: 'cup' },
-      'oats': { cal: 307, p: 10.7, c: 54.8, f: 5.3, na: 4, fib: 8.2, u: 'cup' },
-      'bread': { cal: 80, p: 3.5, c: 15, f: 1, na: 150, fib: 1, u: 'slice' },
-      'sourdough': { cal: 95, p: 3.8, c: 18.5, f: 0.8, na: 190, fib: 1, u: 'slice' },
-      'potato': { cal: 160, p: 4.3, c: 36.6, f: 0.2, na: 15, fib: 3.8, u: 'medium' },
-      'sweet potato': { cal: 112, p: 2, c: 26, f: 0.1, na: 70, fib: 3.9, u: 'medium' },
-      'broccoli': { cal: 31, p: 2.5, c: 6, f: 0.3, na: 30, fib: 2.4, u: 'cup' },
-      'olive oil': { cal: 119, p: 0, c: 0, f: 13.5, na: 0, fib: 0, u: 'tbsp' },
-      'avocado': { cal: 120, p: 1.5, c: 6, f: 11, na: 5, fib: 5, u: 'half' }
+      'chicken breast': { cal: 165, p: 31, c: 0, f: 3.6, na: 74, fib: 0 },
+      'beef': { cal: 215, p: 22, c: 0, f: 14, na: 60, fib: 0 },
+      'steak': { cal: 240, p: 25, c: 0, f: 15, na: 58, fib: 0 },
+      'salmon': { cal: 208, p: 20, c: 0, f: 13, na: 59, fib: 0 },
+      'egg': { cal: 72, p: 6.3, c: 0.4, f: 4.8, na: 71, fib: 0 },
+      'rice': { cal: 205, p: 4.2, c: 44.5, f: 0.4, na: 0, fib: 0.6 },
+      'white rice': { cal: 205, p: 4.2, c: 44.5, f: 0.4, na: 0, fib: 0.6 },
+      'oats': { cal: 307, p: 10.7, c: 54.8, f: 5.3, na: 4, fib: 8.2 },
+      'bread': { cal: 80, p: 3.5, c: 15, f: 1, na: 150, fib: 1 },
+      'sourdough': { cal: 95, p: 3.8, c: 18.5, f: 0.8, na: 190, fib: 1 },
+      'potato': { cal: 160, p: 4.3, c: 36.6, f: 0.2, na: 15, fib: 3.8 },
+      'sweet potato': { cal: 112, p: 2, c: 26, f: 0.1, na: 70, fib: 3.9 },
+      'broccoli': { cal: 31, p: 2.5, c: 6, f: 0.3, na: 30, fib: 2.4 },
+      'olive oil': { cal: 119, p: 0, c: 0, f: 13.5, na: 0, fib: 0 },
+      'avocado': { cal: 120, p: 1.5, c: 6, f: 11, na: 5, fib: 5 }
     };
 
     let curDate = new Date().toISOString().split('T')[0];
     let settings = JSON.parse(localStorage.getItem('macro_settings') || '{"cal":2400,"p":175,"c":260,"f":70,"na":2300,"fib":35}');
+    let coachGoals = { cal: 2400, p: 175, c: 260, f: 70, na: 2300, fib: 35 };
 
     function init() {
       updateDateDisplay();
       loadDaily();
       loadSettingsInputs();
+      calcCoach();
     }
 
     function switchTab(t) {
       document.getElementById('tab-daily').style.display = t === 'daily' ? 'block' : 'none';
       document.getElementById('tab-weekly').style.display = t === 'weekly' ? 'block' : 'none';
+      document.getElementById('tab-coach').style.display = t === 'coach' ? 'block' : 'none';
       document.getElementById('tab-settings').style.display = t === 'settings' ? 'block' : 'none';
       document.querySelectorAll('.nav-btn').forEach((b, i) => {
-        b.classList.toggle('active', (t === 'daily' && i === 0) || (t === 'weekly' && i === 1) || (t === 'settings' && i === 2));
+        b.classList.toggle('active', (t === 'daily' && i === 0) || (t === 'weekly' && i === 1) || (t === 'coach' && i === 2) || (t === 'settings' && i === 3));
       });
       if (t === 'weekly') loadWeekly();
     }
 
     function updateDateDisplay() {
-      document.getElementById('date-label').textContent = curDate;
+      let [y, m, d] = curDate.split('-').map(Number);
+      let dt = new Date(y, m - 1, d);
+      document.getElementById('date-label').textContent = dt.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+      document.getElementById('date-picker').value = curDate;
     }
 
     function changeDay(d) {
@@ -195,13 +238,16 @@
       loadDaily();
     }
 
-    function getMeals(d) {
-      return JSON.parse(localStorage.getItem(`meals_${d}`) || '[]');
+    function pickDate(val) {
+      if (val) {
+        curDate = val;
+        updateDateDisplay();
+        loadDaily();
+      }
     }
 
-    function saveMeals(d, m) {
-      localStorage.setItem(`meals_${d}`, JSON.stringify(m));
-    }
+    function getMeals(d) { return JSON.parse(localStorage.getItem(`meals_${d}`) || '[]'); }
+    function saveMeals(d, m) { localStorage.setItem(`meals_${d}`, JSON.stringify(m)); }
 
     function estimateFood(text) {
       let items = [];
@@ -254,22 +300,22 @@
         totals.cal += m.cal; totals.p += m.p; totals.c += m.c; totals.f += m.f; totals.na += m.na; totals.fib += m.fib;
       });
 
-      document.getElementById('cal-val').textContent = `${Math.round(totals.cal)} kcal`;
-      document.getElementById('p-val').textContent = `${Math.round(totals.p)} g`;
-      document.getElementById('c-val').textContent = `${Math.round(totals.c)} g`;
-      document.getElementById('f-val').textContent = `${Math.round(totals.f)} g`;
-      document.getElementById('na-val').textContent = `${Math.round(totals.na)} mg`;
-      document.getElementById('fib-val').textContent = `${Math.round(totals.fib)} g`;
+      function setBar(idVal, idGoal, idBar, cur, goal, unit) {
+        document.getElementById(idVal).textContent = `${Math.round(cur)} ${unit}`;
+        let pct = Math.round((cur / (goal || 1)) * 100);
+        document.getElementById(idGoal).textContent = `Goal: ${goal} ${unit} (${pct}%)`;
+        let bar = document.getElementById(idBar);
+        bar.style.width = `${Math.min(100, pct)}%`;
+        if (cur >= goal && goal > 0) bar.classList.add('goal-met');
+        else bar.classList.remove('goal-met');
+      }
 
-      document.getElementById('cal-goal').textContent = `Goal: ${settings.cal} (${Math.round((totals.cal/settings.cal)*100)}%)`;
-      document.getElementById('p-goal').textContent = `Goal: ${settings.p}g (${Math.round((totals.p/settings.p)*100)}%)`;
-      document.getElementById('c-goal').textContent = `Goal: ${settings.c}g`;
-      document.getElementById('f-goal').textContent = `Goal: ${settings.f}g`;
-      document.getElementById('na-goal').textContent = `Goal: ${settings.na}mg`;
-      document.getElementById('fib-goal').textContent = `Goal: ${settings.fib}g`;
-
-      document.getElementById('cal-bar').style.width = `${Math.min(100, Math.round((totals.cal/settings.cal)*100))}%`;
-      document.getElementById('p-bar').style.width = `${Math.min(100, Math.round((totals.p/settings.p)*100))}%`;
+      setBar('cal-val', 'cal-goal', 'cal-bar', totals.cal, settings.cal, 'kcal');
+      setBar('p-val', 'p-goal', 'p-bar', totals.p, settings.p, 'g');
+      setBar('c-val', 'c-goal', 'c-bar', totals.c, settings.c, 'g');
+      setBar('f-val', 'f-goal', 'f-bar', totals.f, settings.f, 'g');
+      setBar('na-val', 'na-goal', 'na-bar', totals.na, settings.na, 'mg');
+      setBar('fib-val', 'fib-goal', 'fib-bar', totals.fib, settings.fib, 'g');
 
       let list = document.getElementById('meals-list');
       list.innerHTML = meals.length === 0 ? '<div style="color:var(--text-muted);text-align:center;padding:20px;">Fresh tracker. No meals logged yet for this date.</div>' : '';
@@ -279,8 +325,10 @@
         div.innerHTML = `
           <div><strong>${m.name}</strong> <span style="color:var(--text-muted);font-size:0.8rem">(${m.type})</span></div>
           <div style="display:flex;gap:6px;align-items:center;">
-            <span class="badge" style="color:var(--accent-calories)">${m.cal} kcal</span>
-            <span class="badge" style="color:var(--accent-protein)">${m.p}g P</span>
+            <span class="badge">${m.cal} kcal</span>
+            <span class="badge">${m.p}g P</span>
+            <span class="badge">${m.c}g C</span>
+            <span class="badge">${m.f}g F</span>
             <button class="icon-btn" style="padding:2px 8px;color:var(--danger);" onclick="deleteMeal(${idx})">✕</button>
           </div>
         `;
@@ -318,20 +366,54 @@
         daysHtml += `
           <div class="meal-item">
             <div><strong>${d.toLocaleDateString(undefined, {weekday:'short'})}</strong> (${dStr.slice(5)}) - ${dMeals.length} meals</div>
-            <div>${Math.round(t.cal)} kcal | <span style="color:var(--accent-protein);font-weight:700;">${Math.round(t.p)}g Protein</span></div>
+            <div>${Math.round(t.cal)} kcal | <strong>${Math.round(t.p)}g Protein</strong></div>
           </div>
         `;
       }
 
       document.getElementById('weekly-averages').innerHTML = `
-        <div class="macro-card"><div class="macro-title">Avg Protein</div><div class="macro-val" style="color:var(--accent-protein)">${Math.round(sums.p/7)} g</div><div class="macro-target">Target: ${settings.p}g</div></div>
-        <div class="macro-card"><div class="macro-title">Avg Carbs</div><div class="macro-val" style="color:var(--accent-carbs)">${Math.round(sums.c/7)} g</div><div class="macro-target">Target: ${settings.c}g</div></div>
-        <div class="macro-card"><div class="macro-title">Avg Fat</div><div class="macro-val" style="color:var(--accent-fat)">${Math.round(sums.f/7)} g</div><div class="macro-target">Target: ${settings.f}g</div></div>
-        <div class="macro-card"><div class="macro-title">Avg Sodium</div><div class="macro-val" style="color:var(--accent-sodium)">${Math.round(sums.na/7)} mg</div><div class="macro-target">Target: ${settings.na}mg</div></div>
-        <div class="macro-card"><div class="macro-title">Avg Calories</div><div class="macro-val" style="color:var(--accent-calories)">${Math.round(sums.cal/7)}</div><div class="macro-target">Target: ${settings.cal} kcal</div></div>
-        <div class="macro-card"><div class="macro-title">Avg Fiber</div><div class="macro-val" style="color:var(--accent-fiber)">${Math.round(sums.fib/7)} g</div><div class="macro-target">Target: ${settings.fib}g</div></div>
+        <div class="macro-card"><div class="macro-title">Avg Protein</div><div class="macro-val">${Math.round(sums.p/7)} g</div><div class="macro-target">Target: ${settings.p}g</div></div>
+        <div class="macro-card"><div class="macro-title">Avg Carbs</div><div class="macro-val">${Math.round(sums.c/7)} g</div><div class="macro-target">Target: ${settings.c}g</div></div>
+        <div class="macro-card"><div class="macro-title">Avg Fat</div><div class="macro-val">${Math.round(sums.f/7)} g</div><div class="macro-target">Target: ${settings.f}g</div></div>
+        <div class="macro-card"><div class="macro-title">Avg Sodium</div><div class="macro-val">${Math.round(sums.na/7)} mg</div><div class="macro-target">Target: ${settings.na}mg</div></div>
+        <div class="macro-card"><div class="macro-title">Avg Calories</div><div class="macro-val">${Math.round(sums.cal/7)}</div><div class="macro-target">Target: ${settings.cal} kcal</div></div>
+        <div class="macro-card"><div class="macro-title">Avg Fiber</div><div class="macro-val">${Math.round(sums.fib/7)} g</div><div class="macro-target">Target: ${settings.fib}g</div></div>
       `;
       document.getElementById('weekly-days').innerHTML = daysHtml;
+    }
+
+    function calcCoach() {
+      let g = document.getElementById('coach-goal').value;
+      let w = parseFloat(document.getElementById('coach-weight').value) || 175;
+      let act = document.getElementById('coach-act').value;
+      let mult = act === 'athlete' ? 18 : act === 'moderate' ? 16 : 13.5;
+      let cal = w * mult;
+      if (g === 'aggressive_cut') cal -= 500;
+      else if (g === 'moderate_cut') cal -= 350;
+      else if (g === 'lean_bulk') cal += 250;
+      else if (g === 'aggressive_bulk') cal += 500;
+      cal = Math.round(cal);
+      let p = Math.round(w * 1.0);
+      let f = Math.round((cal * 0.25)/9);
+      let c = Math.round((cal - (p*4 + f*9))/4);
+      let na = act === 'athlete' ? 2800 : 2300;
+      let fib = Math.round((cal / 1000) * 14);
+
+      coachGoals = { cal, p, c, f, na, fib };
+      document.getElementById('c-res-cal').textContent = `${cal}`;
+      document.getElementById('c-res-p').textContent = `${p}g`;
+      document.getElementById('c-res-c').textContent = `${c}g`;
+      document.getElementById('c-res-f').textContent = `${f}g`;
+      document.getElementById('c-res-na').textContent = `${na}mg`;
+      document.getElementById('c-res-fib').textContent = `${fib}g`;
+    }
+
+    function applyCoach() {
+      settings = { ...coachGoals };
+      localStorage.setItem('macro_settings', JSON.stringify(settings));
+      loadSettingsInputs();
+      showToast('Goals applied to Custom Goals & Daily Tracker!');
+      loadDaily();
     }
 
     function loadSettingsInputs() {
@@ -355,11 +437,6 @@
       localStorage.setItem('macro_settings', JSON.stringify(settings));
       showToast('Goals updated!');
       loadDaily();
-    }
-
-    function toggleTheme() {
-      let t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', t);
     }
 
     function showToast(m) {

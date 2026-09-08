@@ -1,5 +1,6 @@
 /**
  * MacroTracker Pro - Client Application Logic
+ * Midnight Theme Edition with Dynamic Goal-Oriented Progress & Goal Coach
  */
 
 // Global State
@@ -11,37 +12,23 @@ const state = {
     weeklyData: null,
     stagedItems: [],
     uploadedImageUrl: null,
-    currentMode: 'text' // 'text' or 'photo'
+    currentMode: 'text',
+    calculatedCoachGoals: {
+        cal: 2400, p: 175, c: 260, f: 70, na: 2300, fib: 35
+    }
 };
 
 // Initialization
 document.addEventListener('DOMContentLoaded', async () => {
-    initTheme();
     await loadSettings();
     initDateControls();
     initTabs();
     initModeSwitcher();
     initPhotoUpload();
     initMealForm();
+    initGoalCoach();
     await loadDailyData();
 });
-
-// Theme Management
-function initTheme() {
-    const savedTheme = localStorage.getItem('macro_theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    const themeBtn = document.getElementById('theme-toggle-btn');
-    if (themeBtn) {
-        themeBtn.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-        themeBtn.addEventListener('click', () => {
-            const current = document.documentElement.getAttribute('data-theme');
-            const next = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', next);
-            localStorage.setItem('macro_theme', next);
-            themeBtn.textContent = next === 'dark' ? '☀️' : '🌙';
-        });
-    }
-}
 
 // Toast Feedback
 function showToast(message) {
@@ -51,7 +38,7 @@ function showToast(message) {
     toast.style.display = 'block';
     setTimeout(() => {
         toast.style.display = 'none';
-    }, 3000);
+    }, 2800);
 }
 
 // Navigation Tabs
@@ -67,7 +54,8 @@ function initTabs() {
             document.querySelectorAll('.tab-pane').forEach(pane => {
                 pane.style.display = 'none';
             });
-            document.getElementById(`tab-${targetTab}`).style.display = 'block';
+            const targetPane = document.getElementById(`tab-${targetTab}`);
+            if (targetPane) targetPane.style.display = 'block';
             
             if (targetTab === 'daily') {
                 await loadDailyData();
@@ -75,12 +63,14 @@ function initTabs() {
                 await loadWeeklyData();
             } else if (targetTab === 'settings') {
                 renderSettingsForm();
+            } else if (targetTab === 'coach') {
+                calculateCoachTargets();
             }
         });
     });
 }
 
-// Date Controls
+// Date Controls (Date on LEFT, grouped controls on RIGHT)
 function initDateControls() {
     const picker = document.getElementById('date-picker');
     picker.value = state.selectedDate;
@@ -91,19 +81,13 @@ function initDateControls() {
         await loadDailyData();
     });
 
-    document.getElementById('prev-day-btn').addEventListener('click', async () => {
-        changeDate(-1);
-    });
-
-    document.getElementById('next-day-btn').addEventListener('click', async () => {
-        changeDate(1);
-    });
-
-    document.getElementById('today-btn').addEventListener('click', async () => {
+    document.getElementById('prev-day-btn').addEventListener('click', () => changeDate(-1));
+    document.getElementById('next-day-btn').addEventListener('click', () => changeDate(1));
+    document.getElementById('today-btn').addEventListener('click', () => {
         state.selectedDate = new Date().toISOString().split('T')[0];
         picker.value = state.selectedDate;
         updateDateLabel();
-        await loadDailyData();
+        loadDailyData();
     });
 
     updateDateLabel();
@@ -135,13 +119,8 @@ function initModeSwitcher() {
             btn.classList.add('active');
             const mode = btn.getAttribute('data-mode');
             state.currentMode = mode;
-            if (mode === 'text') {
-                document.getElementById('text-input-group').style.display = 'block';
-                document.getElementById('photo-input-group').style.display = 'none';
-            } else {
-                document.getElementById('text-input-group').style.display = 'none';
-                document.getElementById('photo-input-group').style.display = 'block';
-            }
+            document.getElementById('text-input-group').style.display = mode === 'text' ? 'block' : 'none';
+            document.getElementById('photo-input-group').style.display = mode === 'photo' ? 'block' : 'none';
         });
     });
 }
@@ -167,7 +146,6 @@ function initPhotoUpload() {
             previewContainer.style.display = 'flex';
             dropzone.style.display = 'none';
 
-            // Upload to server
             try {
                 const res = await fetch('/api/upload', {
                     method: 'POST',
@@ -199,14 +177,10 @@ function initPhotoUpload() {
 
 // Form and Staged Items
 function initMealForm() {
-    // Smart Estimate Button
     document.getElementById('estimate-btn').addEventListener('click', async () => {
-        let desc = '';
-        if (state.currentMode === 'text') {
-            desc = document.getElementById('meal-description').value.trim();
-        } else {
-            desc = document.getElementById('photo-description').value.trim();
-        }
+        const desc = state.currentMode === 'text'
+            ? document.getElementById('meal-description').value.trim()
+            : document.getElementById('photo-description').value.trim();
 
         if (!desc) {
             showToast('Please enter a meal description');
@@ -233,7 +207,6 @@ function initMealForm() {
         }
     });
 
-    // Add Blank Item Row Button
     document.getElementById('add-manual-item-btn').addEventListener('click', () => {
         state.stagedItems.push({
             name: 'New Item',
@@ -248,10 +221,9 @@ function initMealForm() {
         renderStagedItems();
     });
 
-    // Save All Staged Items to Today's Log
     document.getElementById('save-staged-btn').addEventListener('click', async () => {
         if (state.stagedItems.length === 0) {
-            showToast('No items to save. Estimate or add items first.');
+            showToast('No items to save');
             return;
         }
 
@@ -271,8 +243,7 @@ function initMealForm() {
             });
             const data = await res.json();
             if (data.created) {
-                showToast(`Logged ${data.created.length} items to ${mealType}`);
-                // Clear form
+                showToast(`Saved to ${mealType}`);
                 state.stagedItems = [];
                 state.uploadedImageUrl = null;
                 document.getElementById('meal-description').value = '';
@@ -341,6 +312,7 @@ async function loadDailyData() {
     }
 }
 
+// Render Daily Macro Cards with Dynamic Red/Green Progress Bars
 function renderDailyMacroCards(totals) {
     const targets = state.settings || {
         calorie_target: 2400, protein_target: 175, carbs_target: 260,
@@ -364,10 +336,16 @@ function updateMacroCard(key, current, target, unit) {
     const fillEl = card.querySelector('.progress-fill');
 
     valEl.textContent = `${current} ${unit}`;
-    targetEl.textContent = `Goal: ${target} ${unit} (${Math.round((current / (target || 1)) * 100)}%)`;
-    
-    const pct = Math.min(100, Math.round((current / (target || 1)) * 100));
-    fillEl.style.width = `${pct}%`;
+    const pct = Math.round((current / (target || 1)) * 100);
+    targetEl.textContent = `Goal: ${target} ${unit} (${pct}%)`;
+
+    // Dynamic Color: Red until target is met, then Green!
+    fillEl.style.width = `${Math.min(100, pct)}%`;
+    if (current >= target && target > 0) {
+        fillEl.classList.add('goal-met');
+    } else {
+        fillEl.classList.remove('goal-met');
+    }
 }
 
 function renderDailyMealsList(mealsByType) {
@@ -386,7 +364,7 @@ function renderDailyMealsList(mealsByType) {
             catDiv.innerHTML = `
                 <div class="category-header">
                     <span>${cat}</span>
-                    <span style="font-size: 0.85rem; font-weight: normal; color: var(--text-muted);">${items.length} item${items.length > 1 ? 's' : ''}</span>
+                    <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">${items.length} item${items.length > 1 ? 's' : ''}</span>
                 </div>
                 <div class="category-items"></div>
             `;
@@ -403,12 +381,12 @@ function renderDailyMealsList(mealsByType) {
                         </div>
                     </div>
                     <div class="meal-badges">
-                        <span class="badge cal">${m.calories} kcal</span>
-                        <span class="badge p">${m.protein}g P</span>
-                        <span class="badge c">${m.carbs}g C</span>
-                        <span class="badge f">${m.fat}g F</span>
-                        <span class="badge na">${m.sodium}mg Na</span>
-                        <span class="badge fib">${m.fiber}g Fib</span>
+                        <span class="badge">${m.calories} kcal</span>
+                        <span class="badge">${m.protein}g P</span>
+                        <span class="badge">${m.carbs}g C</span>
+                        <span class="badge">${m.fat}g F</span>
+                        <span class="badge">${m.sodium}mg Na</span>
+                        <span class="badge">${m.fiber}g Fib</span>
                         <button class="delete-btn" title="Delete item" onclick="deleteMealItem(${m.id})">🗑️</button>
                     </div>
                 `;
@@ -421,16 +399,16 @@ function renderDailyMealsList(mealsByType) {
     if (totalMealCount === 0) {
         container.innerHTML = `
             <div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
-                <div style="font-size: 2.5rem; margin-bottom: 8px;">🥣</div>
+                <div style="font-size: 2.2rem; margin-bottom: 6px;">🥣</div>
                 <div style="font-weight: 600; color: var(--text-secondary);">Fresh tracker for this day</div>
-                <div style="font-size: 0.9rem;">No meals logged yet. Use the logger above to log food by text or photo.</div>
+                <div style="font-size: 0.85rem;">No meals logged yet. Use the logger above to log food by text or photo.</div>
             </div>
         `;
     }
 }
 
 window.deleteMealItem = async function(id) {
-    if (!confirm('Are you sure you want to delete this meal item?')) return;
+    if (!confirm('Delete this meal item?')) return;
     try {
         const res = await fetch(`/api/meals/${id}`, { method: 'DELETE' });
         const data = await res.json();
@@ -466,37 +444,36 @@ function renderWeeklyAnalytics(data) {
     averagesContainer.innerHTML = `
         <div class="avg-card">
             <div class="macro-title">Avg Protein</div>
-            <div class="avg-val" style="color: var(--accent-protein);">${avgs.protein}g</div>
+            <div class="avg-val">${avgs.protein}g</div>
             <div class="macro-target">Target: ${tgts.protein}g (${avgs.protein >= tgts.protein ? '+' : ''}${Math.round(avgs.protein - tgts.protein)}g)</div>
         </div>
         <div class="avg-card">
             <div class="macro-title">Avg Carbs</div>
-            <div class="avg-val" style="color: var(--accent-carbs);">${avgs.carbs}g</div>
+            <div class="avg-val">${avgs.carbs}g</div>
             <div class="macro-target">Target: ${tgts.carbs}g</div>
         </div>
         <div class="avg-card">
             <div class="macro-title">Avg Fat</div>
-            <div class="avg-val" style="color: var(--accent-fat);">${avgs.fat}g</div>
+            <div class="avg-val">${avgs.fat}g</div>
             <div class="macro-target">Target: ${tgts.fat}g</div>
         </div>
         <div class="avg-card">
             <div class="macro-title">Avg Sodium</div>
-            <div class="avg-val" style="color: var(--accent-sodium);">${avgs.sodium}mg</div>
+            <div class="avg-val">${avgs.sodium}mg</div>
             <div class="macro-target">Target: ${tgts.sodium}mg</div>
         </div>
         <div class="avg-card">
             <div class="macro-title">Avg Calories</div>
-            <div class="avg-val" style="color: var(--accent-calories);">${avgs.calories}</div>
+            <div class="avg-val">${avgs.calories}</div>
             <div class="macro-target">Target: ${tgts.calories} kcal</div>
         </div>
         <div class="avg-card">
             <div class="macro-title">Avg Fiber</div>
-            <div class="avg-val" style="color: var(--accent-fiber);">${avgs.fiber}g</div>
+            <div class="avg-val">${avgs.fiber}g</div>
             <div class="macro-target">Target: ${tgts.fiber}g</div>
         </div>
     `;
 
-    // Render Weekly Bar Chart (Protein)
     const chart = document.getElementById('weekly-chart-bars');
     chart.innerHTML = '';
     const maxProtein = Math.max(...data.days.map(d => d.totals.protein), tgts.protein, 1);
@@ -506,7 +483,7 @@ function renderWeeklyAnalytics(data) {
         const group = document.createElement('div');
         group.className = 'chart-bar-group';
         group.innerHTML = `
-            <div style="font-size: 0.75rem; font-weight: 700; color: var(--accent-protein);">${d.totals.protein > 0 ? Math.round(d.totals.protein) + 'g' : ''}</div>
+            <div style="font-size: 0.75rem; font-weight: 700; color: #ffffff;">${d.totals.protein > 0 ? Math.round(d.totals.protein) + 'g' : ''}</div>
             <div class="chart-bar-track">
                 <div class="chart-bar-fill" style="height: ${heightPct}%;"></div>
             </div>
@@ -515,7 +492,6 @@ function renderWeeklyAnalytics(data) {
         chart.appendChild(group);
     });
 
-    // Render Breakdown Table
     const tbody = document.getElementById('weekly-table-tbody');
     tbody.innerHTML = '';
     data.days.forEach(d => {
@@ -524,7 +500,7 @@ function renderWeeklyAnalytics(data) {
             <td><strong>${d.day_name}</strong> (${d.date.slice(5)})</td>
             <td>${d.meal_count}</td>
             <td>${d.totals.calories}</td>
-            <td style="color: var(--accent-protein); font-weight: 700;">${d.totals.protein}g</td>
+            <td style="font-weight: 700;">${d.totals.protein}g</td>
             <td>${d.totals.carbs}g</td>
             <td>${d.totals.fat}g</td>
             <td>${d.totals.sodium}mg</td>
@@ -533,21 +509,120 @@ function renderWeeklyAnalytics(data) {
         tbody.appendChild(tr);
     });
 
-    // Add Average Row
     const avgTr = document.createElement('tr');
-    avgTr.style.backgroundColor = 'var(--bg-hover)';
+    avgTr.style.backgroundColor = '#1a1a1a';
     avgTr.style.fontWeight = 'bold';
     avgTr.innerHTML = `
         <td>7-Day Average</td>
         <td>-</td>
         <td>${avgs.calories}</td>
-        <td style="color: var(--accent-protein);">${avgs.protein}g</td>
+        <td>${avgs.protein}g</td>
         <td>${avgs.carbs}g</td>
         <td>${avgs.fat}g</td>
         <td>${avgs.sodium}mg</td>
         <td>${avgs.fiber}g</td>
     `;
     tbody.appendChild(avgTr);
+}
+
+// Goal Coach & Interactive Calculator
+function initGoalCoach() {
+    const calcBtn = document.getElementById('calculate-goals-btn');
+    const applyBtn = document.getElementById('apply-goals-btn');
+
+    if (calcBtn) {
+        calcBtn.addEventListener('click', calculateCoachTargets);
+    }
+
+    if (applyBtn) {
+        applyBtn.addEventListener('click', applyCoachGoals);
+    }
+}
+
+function calculateCoachTargets() {
+    const goal = document.getElementById('coach-goal')?.value || 'moderate_cut';
+    const weight = parseFloat(document.getElementById('coach-weight')?.value) || 175;
+    const activity = document.getElementById('coach-activity')?.value || 'athlete';
+    const proteinRatio = document.getElementById('coach-protein-ratio')?.value || 'high';
+
+    // Activity multiplier (calories per lb)
+    let mult = 16.5;
+    if (activity === 'sedentary') mult = 13.5;
+    else if (activity === 'light') mult = 14.5;
+    else if (activity === 'moderate') mult = 16.0;
+    else if (activity === 'athlete') mult = 18.0;
+
+    let tdee = weight * mult;
+    let targetCal = tdee;
+
+    if (goal === 'aggressive_cut') targetCal -= 500;
+    else if (goal === 'moderate_cut') targetCal -= 350;
+    else if (goal === 'lean_bulk') targetCal += 250;
+    else if (goal === 'aggressive_bulk') targetCal += 500;
+
+    targetCal = Math.round(Math.max(1200, targetCal));
+
+    // Protein calculation
+    let pMult = 1.0;
+    if (proteinRatio === 'athletic') pMult = 1.1;
+    else if (proteinRatio === 'moderate') pMult = 0.85;
+
+    let targetP = Math.round(weight * pMult);
+
+    // Fat calculation (~25% of calories, 9 kcal/g)
+    let targetF = Math.round((targetCal * 0.25) / 9);
+
+    // Carbs calculation (remaining calories, 4 kcal/g)
+    let remainingCal = targetCal - (targetP * 4 + targetF * 9);
+    let targetC = Math.round(Math.max(50, remainingCal / 4));
+
+    // Sodium & Fiber
+    let targetNa = activity === 'athlete' ? 2800 : 2300;
+    let targetFib = Math.round(Math.max(28, (targetCal / 1000) * 14));
+
+    state.calculatedCoachGoals = {
+        cal: targetCal,
+        p: targetP,
+        c: targetC,
+        f: targetF,
+        na: targetNa,
+        fib: targetFib
+    };
+
+    document.getElementById('res-cal').textContent = `${targetCal}`;
+    document.getElementById('res-p').textContent = `${targetP}g`;
+    document.getElementById('res-c').textContent = `${targetC}g`;
+    document.getElementById('res-f').textContent = `${targetF}g`;
+    document.getElementById('res-na').textContent = `${targetNa}mg`;
+    document.getElementById('res-fib').textContent = `${targetFib}g`;
+}
+
+async function applyCoachGoals() {
+    const goals = state.calculatedCoachGoals;
+    const payload = {
+        calorie_target: goals.cal,
+        protein_target: goals.p,
+        carbs_target: goals.c,
+        fat_target: goals.f,
+        sodium_target: goals.na,
+        fiber_target: goals.fib,
+        week_start_day: state.settings?.week_start_day || 'Monday',
+        theme: 'dark'
+    };
+
+    try {
+        const res = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        state.settings = await res.json();
+        showToast('Targets applied to Custom Goals & Daily Tracker!');
+        renderDailyMacroCards(state.dailyData ? state.dailyData.totals : { calories: 0, protein: 0, carbs: 0, fat: 0, sodium: 0, fiber: 0 });
+    } catch (err) {
+        console.error('Apply error:', err);
+        showToast('Failed to apply goals');
+    }
 }
 
 // Settings
@@ -582,7 +657,7 @@ document.getElementById('settings-form')?.addEventListener('submit', async (e) =
         sodium_target: parseFloat(document.getElementById('set-na').value),
         fiber_target: parseFloat(document.getElementById('set-fib').value),
         week_start_day: document.getElementById('set-week-start').value,
-        theme: document.documentElement.getAttribute('data-theme') || 'dark'
+        theme: 'dark'
     };
 
     try {
@@ -592,7 +667,7 @@ document.getElementById('settings-form')?.addEventListener('submit', async (e) =
             body: JSON.stringify(payload)
         });
         state.settings = await res.json();
-        showToast('Settings and custom targets saved!');
+        showToast('Custom targets saved!');
     } catch (err) {
         console.error('Settings save error:', err);
         showToast('Failed to save settings');
