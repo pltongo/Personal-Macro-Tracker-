@@ -1,15 +1,17 @@
 /**
  * MacroTracker Pro - Client Application Logic
- * Midnight Theme Edition with Dynamic Goal-Oriented Progress & Goal Coach
+ * Midnight Theme Edition with 24-Hour Timeline & PnL Calendar
  */
 
 // Global State
 const state = {
     currentTab: 'daily',
     selectedDate: new Date().toISOString().split('T')[0],
+    currentMonth: new Date().toISOString().slice(0, 7), // YYYY-MM
     settings: null,
     dailyData: null,
     weeklyData: null,
+    pnlData: null,
     stagedItems: [],
     uploadedImageUrl: null,
     currentMode: 'text',
@@ -18,15 +20,27 @@ const state = {
     }
 };
 
+// Helper: Get current time in PDT
+function getPDTTime() {
+    return new Date().toLocaleTimeString('en-US', {
+        timeZone: 'America/Los_Angeles',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    });
+}
+
 // Initialization
 document.addEventListener('DOMContentLoaded', async () => {
     await loadSettings();
     initDateControls();
     initTabs();
     initModeSwitcher();
-    initPhotoUpload();
+    initPhotoInputs();
+    initBarcodeScanner();
     initMealForm();
     initGoalCoach();
+    initPnLCalendarControls();
     await loadDailyData();
 });
 
@@ -50,15 +64,17 @@ function initTabs() {
             btn.classList.add('active');
             const targetTab = btn.getAttribute('data-tab');
             state.currentTab = targetTab;
-            
+
             document.querySelectorAll('.tab-pane').forEach(pane => {
                 pane.style.display = 'none';
             });
             const targetPane = document.getElementById(`tab-${targetTab}`);
             if (targetPane) targetPane.style.display = 'block';
-            
+
             if (targetTab === 'daily') {
                 await loadDailyData();
+            } else if (targetTab === 'pnl') {
+                await loadPnLCalendar();
             } else if (targetTab === 'weekly') {
                 await loadWeeklyData();
             } else if (targetTab === 'settings') {
@@ -110,7 +126,7 @@ function updateDateLabel() {
     document.getElementById('current-date-label').textContent = dateObj.toLocaleDateString(undefined, options);
 }
 
-// Input Mode (Text vs. Photo)
+// Mode Switcher (Text vs. Photo vs. Barcode)
 function initModeSwitcher() {
     const modeBtns = document.querySelectorAll('.mode-btn');
     modeBtns.forEach(btn => {
@@ -119,32 +135,34 @@ function initModeSwitcher() {
             btn.classList.add('active');
             const mode = btn.getAttribute('data-mode');
             state.currentMode = mode;
+
             document.getElementById('text-input-group').style.display = mode === 'text' ? 'block' : 'none';
             document.getElementById('photo-input-group').style.display = mode === 'photo' ? 'block' : 'none';
+            document.getElementById('barcode-input-group').style.display = mode === 'barcode' ? 'block' : 'none';
         });
     });
 }
 
-// Photo Upload Handling
-function initPhotoUpload() {
-    const fileInput = document.getElementById('meal-photo-input');
-    const dropzone = document.getElementById('photo-dropzone');
-    const previewContainer = document.getElementById('photo-preview-box');
+// Separate Camera vs. Photo Library Inputs (Solves iPhone issue)
+function initPhotoInputs() {
+    const camInput = document.getElementById('camera-file-input');
+    const libInput = document.getElementById('library-file-input');
+    const btnCam = document.getElementById('btn-camera');
+    const btnLib = document.getElementById('btn-library');
+    const previewBox = document.getElementById('photo-preview-box');
     const previewImg = document.getElementById('photo-preview-img');
     const removeBtn = document.getElementById('remove-photo-btn');
 
-    dropzone.addEventListener('click', () => fileInput.click());
+    btnCam.addEventListener('click', () => camInput.click());
+    btnLib.addEventListener('click', () => libInput.click());
 
-    fileInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
+    const handleFile = (file) => {
         if (!file) return;
-
         const reader = new FileReader();
-        reader.onload = async (event) => {
-            const base64Data = event.target.result;
+        reader.onload = async (e) => {
+            const base64Data = e.target.result;
             previewImg.src = base64Data;
-            previewContainer.style.display = 'flex';
-            dropzone.style.display = 'none';
+            previewBox.style.display = 'flex';
 
             try {
                 const res = await fetch('/api/upload', {
@@ -155,27 +173,66 @@ function initPhotoUpload() {
                 const data = await res.json();
                 if (data.url) {
                     state.uploadedImageUrl = data.url;
-                    showToast('Photo uploaded successfully');
+                    showToast('Photo attached');
                 }
             } catch (err) {
-                console.error('Upload error:', err);
+                console.error(err);
                 showToast('Failed to upload photo');
             }
         };
         reader.readAsDataURL(file);
-    });
+    };
 
-    removeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        fileInput.value = '';
+    camInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+    libInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+    removeBtn.addEventListener('click', () => {
+        camInput.value = '';
+        libInput.value = '';
         state.uploadedImageUrl = null;
         previewImg.src = '';
-        previewContainer.style.display = 'none';
-        dropzone.style.display = 'block';
+        previewBox.style.display = 'none';
     });
 }
 
-// Form and Staged Items
+// Barcode Scanner / Open Food Facts Lookup
+function initBarcodeScanner() {
+    const input = document.getElementById('barcode-input');
+    const btn = document.getElementById('barcode-lookup-btn');
+
+    btn.addEventListener('click', async () => {
+        const code = input.value.trim();
+        if (!code) {
+            showToast('Enter a barcode number');
+            return;
+        }
+
+        showToast('Scanning Open Food Facts...');
+        try {
+            const res = await fetch(`/api/barcode?code=${encodeURIComponent(code)}`);
+            const data = await res.json();
+            if (data.found && data.item) {
+                state.stagedItems = [data.item];
+                renderStagedItems();
+                showToast(`Found: ${data.item.name}`);
+            } else {
+                showToast(data.error || 'Barcode not found');
+            }
+        } catch (err) {
+            console.error('Barcode error:', err);
+            showToast('Barcode lookup failed');
+        }
+    });
+
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            btn.click();
+        }
+    });
+}
+
+// Meal Form & Staging
 function initMealForm() {
     document.getElementById('estimate-btn').addEventListener('click', async () => {
         const desc = state.currentMode === 'text'
@@ -183,7 +240,7 @@ function initMealForm() {
             : document.getElementById('photo-description').value.trim();
 
         if (!desc) {
-            showToast('Please enter a meal description');
+            showToast('Please enter foods or description');
             return;
         }
 
@@ -197,12 +254,12 @@ function initMealForm() {
             if (data.items && data.items.length > 0) {
                 state.stagedItems = data.items;
                 renderStagedItems();
-                showToast(`Estimated ${data.items.length} food items`);
+                showToast(`Estimated ${data.items.length} items`);
             } else {
-                showToast('No items estimated');
+                showToast('No items parsed');
             }
         } catch (err) {
-            console.error('Estimate error:', err);
+            console.error(err);
             showToast('Estimation failed');
         }
     });
@@ -227,10 +284,10 @@ function initMealForm() {
             return;
         }
 
-        const mealType = document.getElementById('meal-type-select').value;
+        const pdtTime = getPDTTime();
         const payload = {
             date: state.selectedDate,
-            meal_type: mealType,
+            time: pdtTime,
             image_url: state.uploadedImageUrl || '',
             items: state.stagedItems
         };
@@ -243,18 +300,17 @@ function initMealForm() {
             });
             const data = await res.json();
             if (data.created) {
-                showToast(`Saved to ${mealType}`);
+                showToast(`Logged at ${pdtTime} (PDT)`);
                 state.stagedItems = [];
                 state.uploadedImageUrl = null;
                 document.getElementById('meal-description').value = '';
                 document.getElementById('photo-description').value = '';
                 document.getElementById('photo-preview-box').style.display = 'none';
-                document.getElementById('photo-dropzone').style.display = 'block';
                 document.getElementById('staged-items-container').style.display = 'none';
                 await loadDailyData();
             }
         } catch (err) {
-            console.error('Save error:', err);
+            console.error(err);
             showToast('Failed to save meal');
         }
     });
@@ -306,13 +362,12 @@ async function loadDailyData() {
         const data = await res.json();
         state.dailyData = data;
         renderDailyMacroCards(data.totals);
-        renderDailyMealsList(data.meals_by_type);
+        renderTimelineMeals(data.meals);
     } catch (err) {
         console.error('Error loading daily data:', err);
     }
 }
 
-// Render Daily Macro Cards with Dynamic Red/Green Progress Bars
 function renderDailyMacroCards(totals) {
     const targets = state.settings || {
         calorie_target: 2400, protein_target: 175, carbs_target: 260,
@@ -339,76 +394,63 @@ function updateMacroCard(key, current, target, unit) {
     const pct = Math.round((current / (target || 1)) * 100);
     targetEl.textContent = `Goal: ${target} ${unit} (${pct}%)`;
 
-    // Dynamic Color: Red until target is met, then Green!
+    // Green progress bar fill
     fillEl.style.width = `${Math.min(100, pct)}%`;
-    if (current >= target && target > 0) {
-        fillEl.classList.add('goal-met');
-    } else {
-        fillEl.classList.remove('goal-met');
-    }
 }
 
-function renderDailyMealsList(mealsByType) {
-    const container = document.getElementById('daily-meals-list');
+// 24-Hour PDT Chronological Timeline (Replaces Breakfast/Lunch/Dinner)
+function renderTimelineMeals(meals) {
+    const container = document.getElementById('timeline-meals-list');
     container.innerHTML = '';
 
-    const categories = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
-    let totalMealCount = 0;
-
-    categories.forEach(cat => {
-        const items = mealsByType[cat] || [];
-        totalMealCount += items.length;
-        if (items.length > 0) {
-            const catDiv = document.createElement('div');
-            catDiv.className = 'meal-category';
-            catDiv.innerHTML = `
-                <div class="category-header">
-                    <span>${cat}</span>
-                    <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">${items.length} item${items.length > 1 ? 's' : ''}</span>
-                </div>
-                <div class="category-items"></div>
-            `;
-            const itemsContainer = catDiv.querySelector('.category-items');
-            items.forEach(m => {
-                const card = document.createElement('div');
-                card.className = 'meal-item-card';
-                card.innerHTML = `
-                    <div class="meal-info">
-                        ${m.image_url ? `<img src="${m.image_url}" class="meal-thumb" alt="Meal photo" onclick="window.open('${m.image_url}', '_blank')">` : ''}
-                        <div>
-                            <div class="meal-name">${m.name}</div>
-                            <div class="meal-portion">${m.portion}</div>
-                        </div>
-                    </div>
-                    <div class="meal-badges">
-                        <span class="badge">${m.calories} kcal</span>
-                        <span class="badge">${m.protein}g P</span>
-                        <span class="badge">${m.carbs}g C</span>
-                        <span class="badge">${m.fat}g F</span>
-                        <span class="badge">${m.sodium}mg Na</span>
-                        <span class="badge">${m.fiber}g Fib</span>
-                        <button class="delete-btn" title="Delete item" onclick="deleteMealItem(${m.id})">🗑️</button>
-                    </div>
-                `;
-                itemsContainer.appendChild(card);
-            });
-            container.appendChild(catDiv);
-        }
-    });
-
-    if (totalMealCount === 0) {
+    if (!meals || meals.length === 0) {
         container.innerHTML = `
             <div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
                 <div style="font-size: 2.2rem; margin-bottom: 6px;">🥣</div>
-                <div style="font-weight: 600; color: var(--text-secondary);">Fresh tracker for this day</div>
-                <div style="font-size: 0.85rem;">No meals logged yet. Use the logger above to log food by text or photo.</div>
+                <div style="font-weight: 700; color: var(--text-secondary);">No meals logged on this date yet</div>
+                <div style="font-size: 0.85rem;">Use the logger above to log food by text, photo, or barcode.</div>
             </div>
         `;
+        return;
     }
+
+    const timelineWrap = document.createElement('div');
+    timelineWrap.className = 'timeline-container';
+
+    meals.forEach(m => {
+        const timeDisplay = m.time || 'Logged';
+        const entry = document.createElement('div');
+        entry.className = 'timeline-entry';
+        entry.innerHTML = `
+            <div class="timeline-dot"></div>
+            <div class="timeline-card">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    ${m.image_url ? `<img src="${m.image_url}" class="preview-img" style="width: 54px; height: 54px;" alt="Meal photo">` : ''}
+                    <div>
+                        <div class="timeline-time-badge">🕒 ${timeDisplay} PDT</div>
+                        <div class="meal-name">${m.name}</div>
+                        <div class="meal-portion">${m.portion}</div>
+                    </div>
+                </div>
+                <div class="meal-badges">
+                    <span class="badge">${m.calories} kcal</span>
+                    <span class="badge p-badge">${m.protein}g Protein</span>
+                    <span class="badge">${m.carbs}g Carbs</span>
+                    <span class="badge">${m.fat}g Fat</span>
+                    <span class="badge">${m.sodium}mg Na</span>
+                    <span class="badge">${m.fiber}g Fiber</span>
+                    <button class="delete-btn" title="Delete item" onclick="deleteMealItem(${m.id})">✕</button>
+                </div>
+            </div>
+        `;
+        timelineWrap.appendChild(entry);
+    });
+
+    container.appendChild(timelineWrap);
 }
 
 window.deleteMealItem = async function(id) {
-    if (!confirm('Delete this meal item?')) return;
+    if (!confirm('Delete this item from your timeline?')) return;
     try {
         const res = await fetch(`/api/meals/${id}`, { method: 'DELETE' });
         const data = await res.json();
@@ -420,6 +462,97 @@ window.deleteMealItem = async function(id) {
         console.error('Delete error:', err);
     }
 };
+
+// ==============================================================
+// PnL-Style Protein Goal Calendar Logic (Image 1 replica)
+// ==============================================================
+function initPnLCalendarControls() {
+    document.getElementById('pnl-prev-month').addEventListener('click', () => changePnLMonth(-1));
+    document.getElementById('pnl-next-month').addEventListener('click', () => changePnLMonth(1));
+    document.getElementById('pnl-today-month').addEventListener('click', () => {
+        state.currentMonth = new Date().toISOString().slice(0, 7);
+        loadPnLCalendar();
+    });
+}
+
+function changePnLMonth(deltaMonths) {
+    const [y, m] = state.currentMonth.split('-').map(Number);
+    const dt = new Date(y, m - 1 + deltaMonths, 1);
+    state.currentMonth = dt.toISOString().slice(0, 7);
+    loadPnLCalendar();
+}
+
+async function loadPnLCalendar() {
+    try {
+        const res = await fetch(`/api/calendar?month=${state.currentMonth}`);
+        const data = await res.json();
+        state.pnlData = data;
+        renderPnLCalendar(data);
+    } catch (err) {
+        console.error('Calendar load error:', err);
+    }
+}
+
+function renderPnLCalendar(data) {
+    const [year, month] = data.year_month.split('-').map(Number);
+    const monthName = new Date(year, month - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    document.getElementById('pnl-month-label').textContent = monthName;
+    document.getElementById('pnl-target-subtext').textContent = `Target: ${data.protein_target}g Protein/day`;
+    document.getElementById('pnl-score-badge').textContent = `🎯 Hit: ${data.summary.hit} | Missed: ${data.summary.missed} | Untracked: ${data.summary.untracked}`;
+
+    const grid = document.getElementById('pnl-calendar-grid');
+    grid.innerHTML = '';
+
+    // Day of week headers
+    const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+    weekdays.forEach(wd => {
+        const h = document.createElement('div');
+        h.className = 'pnl-weekday';
+        h.textContent = wd;
+        grid.appendChild(h);
+    });
+
+    // Pad days before 1st of month
+    if (data.days.length > 0) {
+        const firstDayWeekday = data.days[0].weekday; // 0=Mon, 6=Sun
+        for (let i = 0; i < firstDayWeekday; i++) {
+            const pad = document.createElement('div');
+            pad.style.opacity = '0.2';
+            grid.appendChild(pad);
+        }
+    }
+
+    // Render days
+    data.days.forEach(d => {
+        const dayCell = document.createElement('div');
+        dayCell.className = `pnl-day ${d.status}`;
+        dayCell.title = `${d.date}: ${d.protein}g / ${d.target}g Protein`;
+
+        let statusText = '';
+        if (d.status === 'hit') statusText = `${Math.round(d.protein)}g ✓`;
+        else if (d.status === 'missed') statusText = `${Math.round(d.protein)}g`;
+        else statusText = '—';
+
+        dayCell.innerHTML = `
+            <div class="pnl-day-num">${String(d.day).padStart(2, '0')}</div>
+            <div class="pnl-day-status">${statusText}</div>
+        `;
+
+        dayCell.addEventListener('click', () => {
+            state.selectedDate = d.date;
+            document.getElementById('date-picker').value = d.date;
+            updateDateLabel();
+            // Switch to daily tab
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('.nav-btn[data-tab="daily"]').classList.add('active');
+            document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
+            document.getElementById('tab-daily').style.display = 'block';
+            loadDailyData();
+        });
+
+        grid.appendChild(dayCell);
+    });
+}
 
 // Weekly Analytics
 async function loadWeeklyData() {
@@ -442,34 +575,34 @@ function renderWeeklyAnalytics(data) {
 
     const averagesContainer = document.getElementById('weekly-averages-grid');
     averagesContainer.innerHTML = `
-        <div class="avg-card">
+        <div class="macro-card">
             <div class="macro-title">Avg Protein</div>
-            <div class="avg-val">${avgs.protein}g</div>
+            <div class="macro-val" style="color: var(--accent-cyan);">${avgs.protein}g</div>
             <div class="macro-target">Target: ${tgts.protein}g (${avgs.protein >= tgts.protein ? '+' : ''}${Math.round(avgs.protein - tgts.protein)}g)</div>
         </div>
-        <div class="avg-card">
+        <div class="macro-card">
             <div class="macro-title">Avg Carbs</div>
-            <div class="avg-val">${avgs.carbs}g</div>
+            <div class="macro-val">${avgs.carbs}g</div>
             <div class="macro-target">Target: ${tgts.carbs}g</div>
         </div>
-        <div class="avg-card">
+        <div class="macro-card">
             <div class="macro-title">Avg Fat</div>
-            <div class="avg-val">${avgs.fat}g</div>
+            <div class="macro-val">${avgs.fat}g</div>
             <div class="macro-target">Target: ${tgts.fat}g</div>
         </div>
-        <div class="avg-card">
+        <div class="macro-card">
             <div class="macro-title">Avg Sodium</div>
-            <div class="avg-val">${avgs.sodium}mg</div>
+            <div class="macro-val">${avgs.sodium}mg</div>
             <div class="macro-target">Target: ${tgts.sodium}mg</div>
         </div>
-        <div class="avg-card">
+        <div class="macro-card">
             <div class="macro-title">Avg Calories</div>
-            <div class="avg-val">${avgs.calories}</div>
+            <div class="macro-val">${avgs.calories}</div>
             <div class="macro-target">Target: ${tgts.calories} kcal</div>
         </div>
-        <div class="avg-card">
+        <div class="macro-card">
             <div class="macro-title">Avg Fiber</div>
-            <div class="avg-val">${avgs.fiber}g</div>
+            <div class="macro-val">${avgs.fiber}g</div>
             <div class="macro-target">Target: ${tgts.fiber}g</div>
         </div>
     `;
@@ -485,7 +618,7 @@ function renderWeeklyAnalytics(data) {
         group.innerHTML = `
             <div style="font-size: 0.75rem; font-weight: 700; color: #ffffff;">${d.totals.protein > 0 ? Math.round(d.totals.protein) + 'g' : ''}</div>
             <div class="chart-bar-track">
-                <div class="chart-bar-fill" style="height: ${heightPct}%;"></div>
+                <div class="chart-bar-fill" style="height: ${heightPct}%; background-color: var(--accent-cyan);"></div>
             </div>
             <div class="chart-label">${d.day_name}</div>
         `;
@@ -500,7 +633,7 @@ function renderWeeklyAnalytics(data) {
             <td><strong>${d.day_name}</strong> (${d.date.slice(5)})</td>
             <td>${d.meal_count}</td>
             <td>${d.totals.calories}</td>
-            <td style="font-weight: 700;">${d.totals.protein}g</td>
+            <td style="font-weight: 700; color: var(--accent-cyan);">${d.totals.protein}g</td>
             <td>${d.totals.carbs}g</td>
             <td>${d.totals.fat}g</td>
             <td>${d.totals.sodium}mg</td>
@@ -510,13 +643,13 @@ function renderWeeklyAnalytics(data) {
     });
 
     const avgTr = document.createElement('tr');
-    avgTr.style.backgroundColor = '#1a1a1a';
+    avgTr.style.backgroundColor = '#171717';
     avgTr.style.fontWeight = 'bold';
     avgTr.innerHTML = `
         <td>7-Day Average</td>
         <td>-</td>
         <td>${avgs.calories}</td>
-        <td>${avgs.protein}g</td>
+        <td style="color: var(--accent-cyan);">${avgs.protein}g</td>
         <td>${avgs.carbs}g</td>
         <td>${avgs.fat}g</td>
         <td>${avgs.sodium}mg</td>
@@ -525,30 +658,22 @@ function renderWeeklyAnalytics(data) {
     tbody.appendChild(avgTr);
 }
 
-// Goal Coach & Interactive Calculator
+// Goal Coach Logic
 function initGoalCoach() {
     const calcBtn = document.getElementById('calculate-goals-btn');
     const applyBtn = document.getElementById('apply-goals-btn');
 
-    if (calcBtn) {
-        calcBtn.addEventListener('click', calculateCoachTargets);
-    }
-
-    if (applyBtn) {
-        applyBtn.addEventListener('click', applyCoachGoals);
-    }
+    if (calcBtn) calcBtn.addEventListener('click', calculateCoachTargets);
+    if (applyBtn) applyBtn.addEventListener('click', applyCoachGoals);
 }
 
 function calculateCoachTargets() {
     const goal = document.getElementById('coach-goal')?.value || 'moderate_cut';
     const weight = parseFloat(document.getElementById('coach-weight')?.value) || 175;
     const activity = document.getElementById('coach-activity')?.value || 'athlete';
-    const proteinRatio = document.getElementById('coach-protein-ratio')?.value || 'high';
 
-    // Activity multiplier (calories per lb)
     let mult = 16.5;
     if (activity === 'sedentary') mult = 13.5;
-    else if (activity === 'light') mult = 14.5;
     else if (activity === 'moderate') mult = 16.0;
     else if (activity === 'athlete') mult = 18.0;
 
@@ -561,32 +686,15 @@ function calculateCoachTargets() {
     else if (goal === 'aggressive_bulk') targetCal += 500;
 
     targetCal = Math.round(Math.max(1200, targetCal));
-
-    // Protein calculation
-    let pMult = 1.0;
-    if (proteinRatio === 'athletic') pMult = 1.1;
-    else if (proteinRatio === 'moderate') pMult = 0.85;
-
-    let targetP = Math.round(weight * pMult);
-
-    // Fat calculation (~25% of calories, 9 kcal/g)
+    let targetP = Math.round(weight * 1.05); // ~1.05g/lb
     let targetF = Math.round((targetCal * 0.25) / 9);
-
-    // Carbs calculation (remaining calories, 4 kcal/g)
     let remainingCal = targetCal - (targetP * 4 + targetF * 9);
     let targetC = Math.round(Math.max(50, remainingCal / 4));
-
-    // Sodium & Fiber
     let targetNa = activity === 'athlete' ? 2800 : 2300;
     let targetFib = Math.round(Math.max(28, (targetCal / 1000) * 14));
 
     state.calculatedCoachGoals = {
-        cal: targetCal,
-        p: targetP,
-        c: targetC,
-        f: targetF,
-        na: targetNa,
-        fib: targetFib
+        cal: targetCal, p: targetP, c: targetC, f: targetF, na: targetNa, fib: targetFib
     };
 
     document.getElementById('res-cal').textContent = `${targetCal}`;
@@ -617,7 +725,7 @@ async function applyCoachGoals() {
             body: JSON.stringify(payload)
         });
         state.settings = await res.json();
-        showToast('Targets applied to Custom Goals & Daily Tracker!');
+        showToast('Goals applied to Custom Goals & Daily Tracker!');
         renderDailyMacroCards(state.dailyData ? state.dailyData.totals : { calories: 0, protein: 0, carbs: 0, fat: 0, sodium: 0, fiber: 0 });
     } catch (err) {
         console.error('Apply error:', err);

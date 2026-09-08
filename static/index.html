@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Daily Macro Tracker</title>
+  <title>MacroTracker</title>
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
@@ -15,6 +15,10 @@
         <button class="nav-btn active" data-tab="daily">
           <span>📅</span>
           <span>Daily Tracker</span>
+        </button>
+        <button class="nav-btn" data-tab="pnl">
+          <span>📈</span>
+          <span>Goal Calendar</span>
         </button>
         <button class="nav-btn" data-tab="weekly">
           <span>📊</span>
@@ -36,11 +40,11 @@
   <main class="main-content">
 
     <!-- ============================================================== -->
-    <!-- TAB 1: DAILY TRACKER -->
+    <!-- TAB 1: DAILY TRACKER (24-Hour Timeline View) -->
     <!-- ============================================================== -->
     <section id="tab-daily" class="tab-pane">
 
-      <!-- Reorganized Date Bar: Date on LEFT, all controls on RIGHT -->
+      <!-- Reorganized Date Bar: Date on LEFT, controls on RIGHT -->
       <div class="date-bar">
         <div id="current-date-label" class="date-display">Loading...</div>
         <div class="date-controls">
@@ -51,7 +55,7 @@
         </div>
       </div>
 
-      <!-- Monochrome Midnight Macro Cards (Red-to-Green Progress Bars) -->
+      <!-- Monochrome Midnight Macro Cards with Green Progress Bars -->
       <div class="macro-grid">
         <div class="macro-card calories">
           <div class="macro-title">Calories</div>
@@ -91,23 +95,17 @@
         </div>
       </div>
 
-      <!-- Quick Log Meal Card -->
+      <!-- Quick Log Meal Card (No meal type dropdown) -->
       <div class="card-section">
         <div class="section-title">
-          <span>Log Meal or Snack</span>
-          <div class="form-group" style="margin: 0; min-width: 130px;">
-            <select id="meal-type-select" class="form-select" style="padding: 6px 10px;">
-              <option value="Breakfast">Breakfast</option>
-              <option value="Lunch" selected>Lunch</option>
-              <option value="Dinner">Dinner</option>
-              <option value="Snacks">Snack</option>
-            </select>
-          </div>
+          <span>Log Food</span>
+          <span id="pdt-clock-indicator" style="font-size: 0.85rem; color: var(--accent-cyan); font-weight: 600;">Time: Auto (PDT)</span>
         </div>
 
         <div class="input-mode-tabs">
           <button class="mode-btn active" data-mode="text">💬 Text Description</button>
-          <button class="mode-btn" data-mode="photo">📷 Photo / Camera</button>
+          <button class="mode-btn" data-mode="photo">📷 Photo / Library</button>
+          <button class="mode-btn" data-mode="barcode">🏷️ Barcode Scanner</button>
         </div>
 
         <!-- Text Input Mode -->
@@ -116,32 +114,52 @@
           <textarea id="meal-description" class="form-textarea" placeholder="e.g. 8oz chicken breast, 1.5 cups jasmine rice, 1 cup steamed broccoli, and 1 tbsp olive oil"></textarea>
         </div>
 
-        <!-- Photo Upload Mode -->
+        <!-- Photo Upload Mode (Camera + Photo Library Separate for iPhone) -->
         <div id="photo-input-group" class="form-group" style="display: none;">
-          <label class="form-label">Snap or upload a photo of your meal:</label>
-          <div id="photo-dropzone" class="photo-dropzone">
-            <div style="font-size: 2rem; margin-bottom: 6px;">📸</div>
-            <div style="font-weight: 600;">Tap to snap a photo or choose an image</div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Supports camera capture on mobile & file select on desktop</div>
-            <input type="file" id="meal-photo-input" accept="image/*" capture="environment" style="display: none;">
+          <label class="form-label">Add meal photo:</label>
+          <div class="photo-buttons-row">
+            <button id="btn-camera" type="button" class="btn-secondary">
+              <span>📷 Take Photo</span>
+            </button>
+            <button id="btn-library" type="button" class="btn-secondary">
+              <span>🖼️ Photo Library</span>
+            </button>
+            <!-- Camera forced input -->
+            <input type="file" id="camera-file-input" accept="image/*" capture="environment" style="display: none;">
+            <!-- Gallery / library input (no capture attribute) -->
+            <input type="file" id="library-file-input" accept="image/*" style="display: none;">
           </div>
           <div id="photo-preview-box" class="preview-container" style="display: none;">
             <img id="photo-preview-img" class="preview-img" alt="Meal Preview">
             <div>
               <div style="font-weight: 600; font-size: 0.9rem;">Photo Attached</div>
-              <button id="remove-photo-btn" class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem; margin-top: 6px;">Remove Photo</button>
+              <button id="remove-photo-btn" class="icon-btn" style="padding: 4px 10px; font-size: 0.8rem; margin-top: 6px; color: var(--missed-red);">Remove Photo</button>
             </div>
           </div>
           <div style="margin-top: 10px;">
-            <label class="form-label">Optional notes / description for the photo:</label>
-            <input type="text" id="photo-description" class="form-input" placeholder="e.g. Salmon fillet with roasted sweet potato">
+            <label class="form-label">Optional food notes for photo:</label>
+            <input type="text" id="photo-description" class="form-input" placeholder="e.g. Grilled salmon with roasted sweet potato">
           </div>
+        </div>
+
+        <!-- Barcode Scanner Mode (Open Food Facts Database) -->
+        <div id="barcode-input-group" class="form-group" style="display: none;">
+          <label class="form-label">Scan Barcode on Packaged Product:</label>
+          <div class="barcode-box">
+            <input type="text" id="barcode-input" class="form-input" placeholder="Enter or scan 12/13 digit UPC / EAN barcode" style="flex: 1;">
+            <button id="barcode-lookup-btn" type="button" class="btn-primary">
+              <span>🔍 Lookup Product</span>
+            </button>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">
+            Queries verified nutritional data for millions of packaged items from Open Food Facts.
+          </p>
         </div>
 
         <!-- Action Bar -->
         <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
           <button id="estimate-btn" class="btn-primary">
-            <span>✨ Smart Estimate Nutrition</span>
+            <span>✨ Estimate & Review</span>
           </button>
           <button id="add-manual-item-btn" class="btn-secondary">
             <span>➕ Add Item Manually</span>
@@ -151,7 +169,7 @@
         <!-- Staged Editable Items Table -->
         <div id="staged-items-container" style="display: none; margin-top: 20px;">
           <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 8px; color: var(--text-primary);">
-            Review & Adjust Estimated Items:
+            Review & Adjust Items:
           </div>
           <div class="items-table-wrapper">
             <table class="items-table">
@@ -173,18 +191,60 @@
           </div>
           <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
             <button id="save-staged-btn" class="btn-success">
-              <span>💾 Save to Today's Log</span>
+              <span>💾 Log to Timeline</span>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Today's Logged Meals -->
+      <!-- 24-Hour Chronological PDT Timeline (Replaces Breakfast/Lunch/Dinner) -->
       <div class="card-section">
         <div class="section-title">
-          <span>Today's Logged Meals</span>
+          <span>24-Hour Meal Timeline (PDT)</span>
+          <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">Chronological daily food log</span>
         </div>
-        <div id="daily-meals-list">
+        <div id="timeline-meals-list">
+          <!-- Populated dynamically by JavaScript -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- TAB 2: PnL-STYLE PROTEIN GOAL CALENDAR -->
+    <!-- ============================================================== -->
+    <section id="tab-pnl" class="tab-pane" style="display: none;">
+
+      <div class="pnl-calendar-card">
+        <div class="pnl-header">
+          <div>
+            <div id="pnl-month-label" class="pnl-month-title">Loading Month...</div>
+            <div id="pnl-target-subtext" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 2px;">
+              Protein Target: 175g/day
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="pnl-prev-month" class="icon-btn">◀</button>
+            <button id="pnl-today-month" class="icon-btn">This Month</button>
+            <button id="pnl-next-month" class="icon-btn">▶</button>
+          </div>
+        </div>
+
+        <!-- PnL Legend -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+          <div class="pnl-legend">
+            <div><span class="legend-dot hit"></span> Hit Goal (Green)</div>
+            <div><span class="legend-dot missed"></span> Missed Goal (Red)</div>
+            <div><span class="legend-dot untracked"></span> Untracked (Grey)</div>
+          </div>
+          <div id="pnl-score-badge" style="font-size: 0.85rem; font-weight: 700; color: var(--accent-cyan); background: #141414; padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border-color);">
+            Hit: 0 | Missed: 0
+          </div>
+        </div>
+
+        <!-- Calendar Days Grid -->
+        <div class="pnl-grid" id="pnl-calendar-grid">
           <!-- Populated by JavaScript -->
         </div>
       </div>
@@ -192,12 +252,12 @@
     </section>
 
     <!-- ============================================================== -->
-    <!-- TAB 2: WEEKLY ANALYTICS & AVERAGES -->
+    <!-- TAB 3: WEEKLY ANALYTICS & AVERAGES -->
     <!-- ============================================================== -->
     <section id="tab-weekly" class="tab-pane" style="display: none;">
 
-      <div class="week-summary-banner">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+      <div class="card-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
           <div>
             <h2 style="font-size: 1.3rem; font-weight: 800;">End-of-Week 7-Day Averages</h2>
             <div id="weekly-range-label" style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 2px;">
@@ -209,7 +269,7 @@
           </div>
         </div>
 
-        <div id="weekly-averages-grid" class="averages-grid">
+        <div id="weekly-averages-grid" class="macro-grid">
           <!-- Populated dynamically -->
         </div>
       </div>
@@ -252,24 +312,23 @@
     </section>
 
     <!-- ============================================================== -->
-    <!-- TAB 3: GOAL COACH / CHATBOT -->
+    <!-- TAB 4: GOAL COACH / CHATBOT -->
     <!-- ============================================================== -->
     <section id="tab-coach" class="tab-pane" style="display: none;">
 
       <div class="card-section">
         <div class="section-title">
           <span>Macro Goal Coach</span>
-          <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: normal;">Personalized Nutrition Targets</span>
+          <span style="font-size: 0.85rem; color: var(--accent-cyan); font-weight: normal;">Sport & Fitness Optimization</span>
         </div>
         <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 18px;">
-          Configure your physical training targets or chat with the coach to calculate optimized macronutrients based on your goals. When satisfied, click <strong>"Apply to Custom Goals"</strong> to automatically transfer and save the numbers.
+          Calculate tailored macronutrient targets for your training goals, then click <strong>"Apply to Custom Goals"</strong> to automatically update your tracker.
         </p>
 
-        <!-- Conversational / Interactive Goal Builder -->
         <div class="goal-calc-box">
-          <div class="settings-grid">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 16px;">
             <div class="form-group">
-              <label class="form-label">Target Fitness Objective:</label>
+              <label class="form-label">Fitness Target:</label>
               <select id="coach-goal" class="form-select">
                 <option value="lean_bulk">Lean Muscle Bulk (+250 kcal)</option>
                 <option value="aggressive_bulk">Aggressive Mass Gain (+500 kcal)</option>
@@ -279,33 +338,22 @@
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Current Body Weight (lbs):</label>
+              <label class="form-label">Body Weight (lbs):</label>
               <input type="number" id="coach-weight" class="form-input" value="175" min="80" max="400">
             </div>
             <div class="form-group">
-              <label class="form-label">Activity Level:</label>
+              <label class="form-label">Training Routine:</label>
               <select id="coach-activity" class="form-select">
-                <option value="athlete" selected>Very Active (Heavy Lifting + Running / Cardio)</option>
-                <option value="moderate">Moderately Active (3-5 workouts / week)</option>
-                <option value="light">Lightly Active (1-3 workouts / week)</option>
-                <option value="sedentary">Sedentary (Desk job / minimal exercise)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Protein Strategy:</label>
-              <select id="coach-protein-ratio" class="form-select">
-                <option value="high" selected>High Protein (1.0g per lb bodyweight)</option>
-                <option value="athletic">Strength / Endurance Athlete (1.1g per lb bodyweight)</option>
-                <option value="moderate">Moderate Protein (0.8g per lb bodyweight)</option>
+                <option value="athlete" selected>Very Active (Heavy Lifting + Running / Cycling)</option>
+                <option value="moderate">Moderate (3-5 strength sessions / week)</option>
+                <option value="sedentary">Sedentary (Minimal exercise)</option>
               </select>
             </div>
           </div>
 
-          <div style="margin-top: 14px;">
-            <button id="calculate-goals-btn" class="btn-primary">
-              <span>⚡ Calculate Optimized Macro Targets</span>
-            </button>
-          </div>
+          <button id="calculate-goals-btn" class="btn-primary">
+            <span>⚡ Calculate Optimized Targets</span>
+          </button>
 
           <!-- Calculated Target Preview -->
           <div id="coach-results-box" style="margin-top: 18px;">
@@ -349,7 +397,7 @@
     </section>
 
     <!-- ============================================================== -->
-    <!-- TAB 4: CUSTOM GOALS / SETTINGS -->
+    <!-- TAB 5: CUSTOM GOALS / SETTINGS -->
     <!-- ============================================================== -->
     <section id="tab-settings" class="tab-pane" style="display: none;">
 
@@ -358,11 +406,11 @@
           <span>Custom Macro Targets</span>
         </div>
         <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 20px;">
-          These targets power the daily progress indicators and end-of-week averages. You can adjust them directly here or generate them with the Goal Coach.
+          These targets power the daily progress indicators, PnL calendar, and end-of-week averages.
         </p>
 
         <form id="settings-form">
-          <div class="settings-grid">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
             <div class="form-group">
               <label class="form-label">Daily Calories Target (kcal):</label>
               <input type="number" id="set-cal" class="form-input" required min="500" max="10000" step="10">
@@ -424,7 +472,6 @@
 
   </main>
 
-  <!-- Toast Notification Alert -->
   <div id="toast" class="toast">Saved!</div>
 
   <script src="/static/js/app.js"></script>

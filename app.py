@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """
-Full-Stack Macro Tracker Web Application
-=========================================
-Self-contained, production-grade single-user web app for tracking daily meals,
-custom macro targets, and end-of-week averages across mobile and desktop.
-Zero external dependencies - runs with Python standard library.
+Full-Stack Macro Tracker Web Application - Midnight Edition
+===========================================================
+- 24-Hour PDT Chronological Meal Timeline (No Breakfast/Lunch/Dinner dropdowns)
+- PnL-Style Monthly Protein Goal Calendar (Green = Hit, Red = Missed, Grey = Untracked)
+- Barcode Scanner Integration (Open Food Facts API)
+- Midnight Palette (Pitch black #000000 with vibrant cyan accents)
+- Goal Coach with 1-Click Custom Goal Transfer
+- Zero external package dependencies - standard Python 3 only
 """
 import http.server
 import socketserver
 import json
 import urllib.parse
+import urllib.request
 import os
 import mimetypes
 import base64
@@ -18,23 +22,30 @@ import re
 import sqlite3
 import csv
 import io
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
-# Configuration
 PORT = int(os.environ.get("PORT", 8000))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads")
-JSON_BACKUP_PATH = os.path.join(BASE_DIR, "macro_data.json")
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(STATIC_DIR, exist_ok=True)
+
+# PDT Timezone helper (UTC - 7 hours)
+PDT_TZ = timezone(timedelta(hours=-7))
+
+def get_current_pdt_time_str():
+    return datetime.now(PDT_TZ).strftime("%I:%M %p")
+
+def get_current_pdt_date_str():
+    return datetime.now(PDT_TZ).strftime("%Y-%m-%d")
 
 # ----------------------------------------------------------------------
 # 1. Nutrition Reference Database & Natural Language Estimator
 # ----------------------------------------------------------------------
 NUTRITION_DB = {
-    # Proteins & Meats (per 100g unless specified)
+    # Proteins & Meats
     "chicken breast": {"unit": "100g", "cal": 165, "p": 31.0, "c": 0.0, "f": 3.6, "na": 74, "fib": 0.0},
     "chicken thigh": {"unit": "100g", "cal": 209, "p": 26.0, "c": 0.0, "f": 10.9, "na": 84, "fib": 0.0},
     "chicken": {"unit": "100g", "cal": 180, "p": 28.0, "c": 0.0, "f": 7.0, "na": 75, "fib": 0.0},
@@ -203,6 +214,48 @@ def estimate_meal_nutrition(description):
 
     return {"items": items, "totals": total}
 
+def lookup_barcode(code):
+    """Queries Open Food Facts for packaged product macros."""
+    clean_code = code.strip()
+    url = f"https://world.openfoodfacts.org/api/v2/product/{clean_code}.json"
+    req = urllib.request.Request(url, headers={"User-Agent": "MacroTrackerPro/1.0 (contact@example.com)"})
+    try:
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read().decode("utf-8"))
+            if data.get("status") == 1 and "product" in data:
+                prod = data["product"]
+                nutriments = prod.get("nutriments", {})
+                name = prod.get("product_name") or prod.get("generic_name") or f"Product {clean_code}"
+                brand = prod.get("brands", "")
+                full_name = f"{brand} {name}".strip() if brand else name
+                serving = prod.get("serving_size", "1 serving (100g)")
+
+                # Per serving if available, otherwise per 100g
+                cal = float(nutriments.get("energy-kcal_serving", nutriments.get("energy-kcal_100g", 0)))
+                p = float(nutriments.get("proteins_serving", nutriments.get("proteins_100g", 0)))
+                c = float(nutriments.get("carbohydrates_serving", nutriments.get("carbohydrates_100g", 0)))
+                f = float(nutriments.get("fat_serving", nutriments.get("fat_100g", 0)))
+                na_g = float(nutriments.get("sodium_serving", nutriments.get("sodium_100g", 0)))
+                na = round(na_g * 1000, 1) # convert to mg
+                fib = float(nutriments.get("fiber_serving", nutriments.get("fiber_100g", 0)))
+
+                return {
+                    "found": True,
+                    "item": {
+                        "name": full_name,
+                        "portion": serving,
+                        "calories": round(cal, 1),
+                        "protein": round(p, 1),
+                        "carbs": round(c, 1),
+                        "fat": round(f, 1),
+                        "sodium": round(na, 1),
+                        "fiber": round(fib, 1)
+                    }
+                }
+    except Exception as e:
+        print(f"Barcode fetch error: {e}")
+    return {"found": False, "error": "Product not found or barcode invalid"}
+
 # ----------------------------------------------------------------------
 # 2. Database Persistence Layer
 # ----------------------------------------------------------------------
@@ -231,7 +284,8 @@ def init_db():
     CREATE TABLE IF NOT EXISTS meals (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         date TEXT NOT NULL,
-        meal_type TEXT NOT NULL,
+        time TEXT DEFAULT '',
+        meal_type TEXT DEFAULT 'Meal',
         name TEXT NOT NULL,
         portion TEXT,
         calories REAL DEFAULT 0,
@@ -245,6 +299,12 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
+    # Check if 'time' column exists for existing DBs
+    try:
+        c.execute("SELECT time FROM meals LIMIT 1")
+    except Exception:
+        c.execute("ALTER TABLE meals ADD COLUMN time TEXT DEFAULT ''")
+
     c.execute("""
     CREATE TABLE IF NOT EXISTS settings (
         id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -310,12 +370,15 @@ def add_meal(m):
     conn = get_db()
     c = conn.cursor()
     custom_json = json.dumps(m.get("custom_nutrients", {}))
+    # Record current PDT time if not provided
+    pdt_time = m.get("time") or get_current_pdt_time_str()
     c.execute("""
-    INSERT INTO meals (date, meal_type, name, portion, calories, protein, carbs, fat, sodium, fiber, custom_nutrients, image_url)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO meals (date, time, meal_type, name, portion, calories, protein, carbs, fat, sodium, fiber, custom_nutrients, image_url)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         m.get("date"),
-        m.get("meal_type", "Lunch"),
+        pdt_time,
+        m.get("meal_type", "Meal"),
         m.get("name"),
         m.get("portion", "1 serving"),
         float(m.get("calories", 0)),
@@ -345,24 +408,6 @@ def get_meal_by_id(meal_id):
         return item
     return None
 
-def update_meal(meal_id, m):
-    conn = get_db()
-    custom_json = json.dumps(m.get("custom_nutrients", {}))
-    conn.execute("""
-    UPDATE meals SET
-        date = ?, meal_type = ?, name = ?, portion = ?, calories = ?, protein = ?,
-        carbs = ?, fat = ?, sodium = ?, fiber = ?, custom_nutrients = ?, image_url = ?
-    WHERE id = ?
-    """, (
-        m.get("date"), m.get("meal_type"), m.get("name"), m.get("portion"),
-        float(m.get("calories", 0)), float(m.get("protein", 0)), float(m.get("carbs", 0)),
-        float(m.get("fat", 0)), float(m.get("sodium", 0)), float(m.get("fiber", 0)),
-        custom_json, m.get("image_url", ""), meal_id
-    ))
-    conn.commit()
-    conn.close()
-    return get_meal_by_id(meal_id)
-
 def delete_meal(meal_id):
     conn = get_db()
     conn.execute("DELETE FROM meals WHERE id = ?", (meal_id,))
@@ -371,13 +416,13 @@ def delete_meal(meal_id):
     return True
 
 def get_meals_by_date(target_date):
+    """Returns meals sorted chronologically for the 24-hour timeline view."""
     conn = get_db()
     rows = conn.execute("SELECT * FROM meals WHERE date = ? ORDER BY id ASC", (target_date,)).fetchall()
     conn.close()
 
     meals = []
     daily_totals = {"calories": 0.0, "protein": 0.0, "carbs": 0.0, "fat": 0.0, "sodium": 0.0, "fiber": 0.0}
-    meals_by_type = {"Breakfast": [], "Lunch": [], "Dinner": [], "Snacks": []}
 
     for r in rows:
         item = dict(r)
@@ -386,11 +431,6 @@ def get_meals_by_date(target_date):
         except Exception:
             item["custom_nutrients"] = {}
         meals.append(item)
-
-        m_type = item.get("meal_type", "Snacks")
-        if m_type not in meals_by_type:
-            meals_by_type[m_type] = []
-        meals_by_type[m_type].append(item)
 
         daily_totals["calories"] += item["calories"]
         daily_totals["protein"] += item["protein"]
@@ -405,8 +445,84 @@ def get_meals_by_date(target_date):
     return {
         "date": target_date,
         "meals": meals,
-        "meals_by_type": meals_by_type,
         "totals": daily_totals
+    }
+
+def get_monthly_pnl_calendar(year_month):
+    """
+    Computes PnL-style protein tracking status for every day in YYYY-MM.
+    Status: 'hit' (Green), 'missed' (Red), or 'untracked' (Grey)
+    """
+    settings = get_settings()
+    p_target = float(settings.get("protein_target", 175))
+
+    conn = get_db()
+    # Group by date and sum protein
+    rows = conn.execute("""
+    SELECT date, SUM(protein) as total_protein, COUNT(id) as meal_count, SUM(calories) as total_calories
+    FROM meals
+    WHERE date LIKE ?
+    GROUP BY date
+    """, (f"{year_month}%",)).fetchall()
+    conn.close()
+
+    data_map = {}
+    for r in rows:
+        data_map[r["date"]] = {
+            "protein": round(r["total_protein"], 1),
+            "calories": round(r["total_calories"], 1),
+            "meal_count": r["meal_count"]
+        }
+
+    # Build full month list
+    parts = year_month.split("-")
+    year = int(parts[0])
+    month = int(parts[1])
+
+    import calendar
+    _, num_days = calendar.monthrange(year, month)
+
+    days_result = []
+    summary = {"hit": 0, "missed": 0, "untracked": 0}
+
+    for d in range(1, num_days + 1):
+        d_str = f"{year:04d}-{month:02d}-{d:02d}"
+        dt = datetime(year, month, d)
+        
+        if d_str in data_map:
+            logged_p = data_map[d_str]["protein"]
+            if logged_p >= p_target:
+                status = "hit"
+                summary["hit"] += 1
+            else:
+                status = "missed"
+                summary["missed"] += 1
+            days_result.append({
+                "date": d_str,
+                "day": d,
+                "weekday": dt.weekday(), # 0=Mon, 6=Sun
+                "protein": logged_p,
+                "target": p_target,
+                "status": status,
+                "meal_count": data_map[d_str]["meal_count"]
+            })
+        else:
+            summary["untracked"] += 1
+            days_result.append({
+                "date": d_str,
+                "day": d,
+                "weekday": dt.weekday(),
+                "protein": 0,
+                "target": p_target,
+                "status": "untracked",
+                "meal_count": 0
+            })
+
+    return {
+        "year_month": year_month,
+        "protein_target": p_target,
+        "summary": summary,
+        "days": days_result
     }
 
 def get_weekly_analytics(ref_date_str):
@@ -488,10 +604,10 @@ def export_data(format_type="json"):
     if format_type == "csv":
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(["Date", "Meal Type", "Food Name", "Portion", "Calories (kcal)", "Protein (g)", "Carbs (g)", "Fat (g)", "Sodium (mg)", "Fiber (g)", "Image"])
+        writer.writerow(["Date", "Time (PDT)", "Food Name", "Portion", "Calories (kcal)", "Protein (g)", "Carbs (g)", "Fat (g)", "Sodium (mg)", "Fiber (g)", "Image"])
         for m in data:
             writer.writerow([
-                m["date"], m["meal_type"], m["name"], m["portion"],
+                m["date"], m.get("time", ""), m["name"], m["portion"],
                 m["calories"], m["protein"], m["carbs"], m["fat"], m["sodium"], m["fiber"],
                 m.get("image_url", "")
             ])
@@ -575,12 +691,24 @@ class MacroTrackerHandler(http.server.BaseHTTPRequestHandler):
             self.send_json(get_settings())
             return
         elif path == "/api/meals":
-            date_param = query.get("date", [datetime.now().strftime("%Y-%m-%d")])[0]
+            date_param = query.get("date", [get_current_pdt_date_str()])[0]
             self.send_json(get_meals_by_date(date_param))
             return
         elif path == "/api/weekly":
-            date_param = query.get("date", [datetime.now().strftime("%Y-%m-%d")])[0]
+            date_param = query.get("date", [get_current_pdt_date_str()])[0]
             self.send_json(get_weekly_analytics(date_param))
+            return
+        elif path == "/api/calendar":
+            ym_param = query.get("month", [datetime.now(PDT_TZ).strftime("%Y-%m")])[0]
+            self.send_json(get_monthly_pnl_calendar(ym_param))
+            return
+        elif path == "/api/barcode":
+            code = query.get("code", [""])[0]
+            if not code:
+                self.send_error_json("Missing barcode", 400)
+                return
+            res = lookup_barcode(code)
+            self.send_json(res)
             return
         elif path == "/api/export":
             fmt = query.get("format", ["json"])[0]
@@ -636,15 +764,17 @@ class MacroTrackerHandler(http.server.BaseHTTPRequestHandler):
                 self.send_error_json(f"Upload failed: {str(e)}", 500)
             return
         elif path == "/api/meals":
+            pdt_time = payload.get("time") or get_current_pdt_time_str()
+            m_date = payload.get("date", get_current_pdt_date_str())
+            img = payload.get("image_url", "")
+
             if "items" in payload and isinstance(payload["items"], list):
                 created = []
-                m_date = payload.get("date", datetime.now().strftime("%Y-%m-%d"))
-                m_type = payload.get("meal_type", "Lunch")
-                img = payload.get("image_url", "")
                 for item in payload["items"]:
                     item_data = {
                         "date": m_date,
-                        "meal_type": m_type,
+                        "time": pdt_time,
+                        "meal_type": "Meal",
                         "name": item.get("name", "Food Item"),
                         "portion": item.get("portion", "1 serving"),
                         "calories": float(item.get("calories", 0)),
@@ -662,22 +792,11 @@ class MacroTrackerHandler(http.server.BaseHTTPRequestHandler):
                 if not payload.get("name") or not payload.get("date"):
                     self.send_error_json("Missing meal name or date", 400)
                     return
+                if not payload.get("time"):
+                    payload["time"] = pdt_time
                 self.send_json(add_meal(payload))
             return
 
-        self.send_error_json("Not found", 404)
-
-    def do_PUT(self):
-        parsed = urllib.parse.urlparse(self.path)
-        path = parsed.path
-        if path.startswith("/api/meals/"):
-            try:
-                meal_id = int(path.split("/")[-1])
-                payload = self.parse_body()
-                self.send_json(update_meal(meal_id, payload))
-            except Exception as e:
-                self.send_error_json(str(e), 400)
-            return
         self.send_error_json("Not found", 404)
 
     def do_DELETE(self):
@@ -697,7 +816,7 @@ def run_server(port=PORT):
     init_db()
     server_address = ("0.0.0.0", port)
     httpd = http.server.ThreadingHTTPServer(server_address, MacroTrackerHandler)
-    print(f"Macro Tracker Full-Stack Server running at http://localhost:{port}")
+    print(f"Macro Tracker Midnight Server running at http://0.0.0.0:{port}")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
