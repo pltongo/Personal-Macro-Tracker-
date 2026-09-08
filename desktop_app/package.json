@@ -1,0 +1,16 @@
+{
+  "name": "macro-tracker-desktop",
+  "version": "1.0.0",
+  "description": "Cross-Platform Desktop Application for MacroTracker Pro",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^26.0.0",
+    "electron-builder": "^24.6.4"
+  }
+}
