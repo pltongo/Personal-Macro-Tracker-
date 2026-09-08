@@ -1,13 +1,13 @@
 /**
  * MacroTracker Pro - Client Application Logic
- * Midnight Theme Edition with 24-Hour Timeline & PnL Calendar
+ * Midnight Theme Edition with Seamless Staged Cards & Barcode Scanner
  */
 
 // Global State
 const state = {
     currentTab: 'daily',
     selectedDate: new Date().toISOString().split('T')[0],
-    currentMonth: new Date().toISOString().slice(0, 7), // YYYY-MM
+    currentMonth: new Date().toISOString().slice(0, 7),
     settings: null,
     dailyData: null,
     weeklyData: null,
@@ -15,6 +15,7 @@ const state = {
     stagedItems: [],
     uploadedImageUrl: null,
     currentMode: 'text',
+    scannerStream: null,
     calculatedCoachGoals: {
         cal: 2400, p: 175, c: 260, f: 70, na: 2300, fib: 35
     }
@@ -71,6 +72,9 @@ function initTabs() {
             const targetPane = document.getElementById(`tab-${targetTab}`);
             if (targetPane) targetPane.style.display = 'block';
 
+            // Stop live camera scanner if active when navigating away
+            stopCameraScanner();
+
             if (targetTab === 'daily') {
                 await loadDailyData();
             } else if (targetTab === 'pnl') {
@@ -86,7 +90,7 @@ function initTabs() {
     });
 }
 
-// Date Controls (Date on LEFT, grouped controls on RIGHT)
+// Date Controls
 function initDateControls() {
     const picker = document.getElementById('date-picker');
     picker.value = state.selectedDate;
@@ -139,28 +143,29 @@ function initModeSwitcher() {
             document.getElementById('text-input-group').style.display = mode === 'text' ? 'block' : 'none';
             document.getElementById('photo-input-group').style.display = mode === 'photo' ? 'block' : 'none';
             document.getElementById('barcode-input-group').style.display = mode === 'barcode' ? 'block' : 'none';
+
+            if (mode !== 'barcode') stopCameraScanner();
         });
     });
 }
 
-// Separate Camera vs. Photo Library Inputs (Solves iPhone issue)
+// Photo Input (Single button giving native iOS prompt: Take Photo / Photo Library / Choose File)
 function initPhotoInputs() {
-    const camInput = document.getElementById('camera-file-input');
-    const libInput = document.getElementById('library-file-input');
-    const btnCam = document.getElementById('btn-camera');
-    const btnLib = document.getElementById('btn-library');
+    const fileInput = document.getElementById('meal-photo-input');
+    const btnPick = document.getElementById('btn-photo-pick');
     const previewBox = document.getElementById('photo-preview-box');
     const previewImg = document.getElementById('photo-preview-img');
     const removeBtn = document.getElementById('remove-photo-btn');
 
-    btnCam.addEventListener('click', () => camInput.click());
-    btnLib.addEventListener('click', () => libInput.click());
+    btnPick.addEventListener('click', () => fileInput.click());
 
-    const handleFile = (file) => {
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
         if (!file) return;
+
         const reader = new FileReader();
-        reader.onload = async (e) => {
-            const base64Data = e.target.result;
+        reader.onload = async (event) => {
+            const base64Data = event.target.result;
             previewImg.src = base64Data;
             previewBox.style.display = 'flex';
 
@@ -181,55 +186,150 @@ function initPhotoInputs() {
             }
         };
         reader.readAsDataURL(file);
-    };
-
-    camInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
-    libInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+    });
 
     removeBtn.addEventListener('click', () => {
-        camInput.value = '';
-        libInput.value = '';
+        fileInput.value = '';
         state.uploadedImageUrl = null;
         previewImg.src = '';
         previewBox.style.display = 'none';
     });
 }
 
-// Barcode Scanner / Open Food Facts Lookup
+// Barcode Scanner Integration (Camera / Photo + Open Food Facts)
 function initBarcodeScanner() {
+    const scanBtn = document.getElementById('btn-barcode-scan-photo');
+    const barcodeFileInput = document.getElementById('barcode-file-input');
     const input = document.getElementById('barcode-input');
-    const btn = document.getElementById('barcode-lookup-btn');
+    const lookupBtn = document.getElementById('barcode-lookup-btn');
+    const stopScannerBtn = document.getElementById('stop-scanner-btn');
 
-    btn.addEventListener('click', async () => {
+    // Camera Scan Action
+    scanBtn.addEventListener('click', async () => {
+        // First try live video scanner if BarcodeDetector is available
+        if ('BarcodeDetector' in window && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            startLiveCameraScanner();
+        } else {
+            // Otherwise open camera/photo picker to decode image
+            barcodeFileInput.click();
+        }
+    });
+
+    barcodeFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        decodeBarcodeFromImageFile(file);
+    });
+
+    if (stopScannerBtn) {
+        stopScannerBtn.addEventListener('click', stopCameraScanner);
+    }
+
+    lookupBtn.addEventListener('click', () => {
         const code = input.value.trim();
-        if (!code) {
-            showToast('Enter a barcode number');
-            return;
-        }
-
-        showToast('Scanning Open Food Facts...');
-        try {
-            const res = await fetch(`/api/barcode?code=${encodeURIComponent(code)}`);
-            const data = await res.json();
-            if (data.found && data.item) {
-                state.stagedItems = [data.item];
-                renderStagedItems();
-                showToast(`Found: ${data.item.name}`);
-            } else {
-                showToast(data.error || 'Barcode not found');
-            }
-        } catch (err) {
-            console.error('Barcode error:', err);
-            showToast('Barcode lookup failed');
-        }
+        if (code) lookupBarcode(code);
+        else showToast('Enter a barcode number');
     });
 
     input.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            btn.click();
+            lookupBtn.click();
         }
     });
+}
+
+async function startLiveCameraScanner() {
+    const container = document.getElementById('scanner-container');
+    const video = document.getElementById('barcode-video');
+    container.style.display = 'block';
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+        });
+        state.scannerStream = stream;
+        video.srcObject = stream;
+        await video.play();
+
+        const barcodeDetector = new BarcodeDetector({
+            formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'qr_code']
+        });
+
+        const scanFrame = async () => {
+            if (!state.scannerStream) return;
+            try {
+                const barcodes = await barcodeDetector.detect(video);
+                if (barcodes.length > 0) {
+                    const rawCode = barcodes[0].rawValue;
+                    document.getElementById('barcode-input').value = rawCode;
+                    showToast(`Detected: ${rawCode}`);
+                    stopCameraScanner();
+                    lookupBarcode(rawCode);
+                    return;
+                }
+            } catch (err) {
+                // Ignore frame parse errors
+            }
+            if (state.scannerStream) requestAnimationFrame(scanFrame);
+        };
+        requestAnimationFrame(scanFrame);
+    } catch (err) {
+        console.error('Camera access error:', err);
+        container.style.display = 'none';
+        // Fallback to photo capture
+        document.getElementById('barcode-file-input').click();
+    }
+}
+
+function stopCameraScanner() {
+    const container = document.getElementById('scanner-container');
+    if (container) container.style.display = 'none';
+    if (state.scannerStream) {
+        state.scannerStream.getTracks().forEach(track => track.stop());
+        state.scannerStream = null;
+    }
+}
+
+async function decodeBarcodeFromImageFile(file) {
+    if ('BarcodeDetector' in window) {
+        try {
+            showToast('Scanning barcode photo...');
+            const bitmap = await createImageBitmap(file);
+            const detector = new BarcodeDetector({
+                formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128']
+            });
+            const barcodes = await detector.detect(bitmap);
+            if (barcodes.length > 0) {
+                const code = barcodes[0].rawValue;
+                document.getElementById('barcode-input').value = code;
+                showToast(`Detected: ${code}`);
+                lookupBarcode(code);
+                return;
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+    showToast('Could not auto-read barcode. Please type the digits.');
+}
+
+async function lookupBarcode(code) {
+    showToast('Searching Open Food Facts...');
+    try {
+        const res = await fetch(`/api/barcode?code=${encodeURIComponent(code)}`);
+        const data = await res.json();
+        if (data.found && data.item) {
+            state.stagedItems = [data.item];
+            renderStagedItems();
+            showToast(`Found: ${data.item.name}`);
+        } else {
+            showToast(data.error || 'Product not found');
+        }
+    } catch (err) {
+        console.error('Barcode error:', err);
+        showToast('Barcode lookup failed');
+    }
 }
 
 // Meal Form & Staging
@@ -316,10 +416,11 @@ function initMealForm() {
     });
 }
 
+// SEAMLESS STAGED ITEMS CARDS (Fixes white overflowing text boxes!)
 function renderStagedItems() {
     const container = document.getElementById('staged-items-container');
-    const tbody = document.getElementById('staged-items-tbody');
-    tbody.innerHTML = '';
+    const wrapper = document.getElementById('staged-cards-wrapper');
+    wrapper.innerHTML = '';
 
     if (state.stagedItems.length === 0) {
         container.style.display = 'none';
@@ -328,19 +429,42 @@ function renderStagedItems() {
     container.style.display = 'block';
 
     state.stagedItems.forEach((item, index) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><input type="text" class="mini-input" style="width: 140px;" value="${item.name}" onchange="updateStagedItem(${index}, 'name', this.value)"></td>
-            <td><input type="text" class="mini-input" style="width: 80px;" value="${item.portion}" onchange="updateStagedItem(${index}, 'portion', this.value)"></td>
-            <td><input type="number" step="1" class="mini-input" value="${item.calories}" onchange="updateStagedItem(${index}, 'calories', parseFloat(this.value)||0)"></td>
-            <td><input type="number" step="0.5" class="mini-input" value="${item.protein}" onchange="updateStagedItem(${index}, 'protein', parseFloat(this.value)||0)"></td>
-            <td><input type="number" step="0.5" class="mini-input" value="${item.carbs}" onchange="updateStagedItem(${index}, 'carbs', parseFloat(this.value)||0)"></td>
-            <td><input type="number" step="0.5" class="mini-input" value="${item.fat}" onchange="updateStagedItem(${index}, 'fat', parseFloat(this.value)||0)"></td>
-            <td><input type="number" step="10" class="mini-input" value="${item.sodium}" onchange="updateStagedItem(${index}, 'sodium', parseFloat(this.value)||0)"></td>
-            <td><input type="number" step="0.5" class="mini-input" value="${item.fiber}" onchange="updateStagedItem(${index}, 'fiber', parseFloat(this.value)||0)"></td>
-            <td><button class="delete-btn" onclick="removeStagedItem(${index})">✕</button></td>
+        const card = document.createElement('div');
+        card.className = 'staged-card';
+        card.innerHTML = `
+            <div class="staged-card-top">
+                <input type="text" class="staged-name-input" value="${item.name}" placeholder="Food name" onchange="updateStagedItem(${index}, 'name', this.value)">
+                <input type="text" class="staged-portion-input" value="${item.portion}" placeholder="Portion" onchange="updateStagedItem(${index}, 'portion', this.value)">
+                <button class="delete-btn" title="Remove" onclick="removeStagedItem(${index})">✕</button>
+            </div>
+            <div class="staged-macros-grid">
+                <div class="staged-macro-box">
+                    <span class="staged-macro-label">Calories</span>
+                    <input type="number" step="1" class="staged-macro-num" value="${item.calories}" onchange="updateStagedItem(${index}, 'calories', parseFloat(this.value)||0)">
+                </div>
+                <div class="staged-macro-box">
+                    <span class="staged-macro-label" style="color: var(--accent-cyan);">Protein</span>
+                    <input type="number" step="0.5" class="staged-macro-num" value="${item.protein}" onchange="updateStagedItem(${index}, 'protein', parseFloat(this.value)||0)">
+                </div>
+                <div class="staged-macro-box">
+                    <span class="staged-macro-label">Carbs</span>
+                    <input type="number" step="0.5" class="staged-macro-num" value="${item.carbs}" onchange="updateStagedItem(${index}, 'carbs', parseFloat(this.value)||0)">
+                </div>
+                <div class="staged-macro-box">
+                    <span class="staged-macro-label">Fat</span>
+                    <input type="number" step="0.5" class="staged-macro-num" value="${item.fat}" onchange="updateStagedItem(${index}, 'fat', parseFloat(this.value)||0)">
+                </div>
+                <div class="staged-macro-box">
+                    <span class="staged-macro-label">Sodium</span>
+                    <input type="number" step="10" class="staged-macro-num" value="${item.sodium}" onchange="updateStagedItem(${index}, 'sodium', parseFloat(this.value)||0)">
+                </div>
+                <div class="staged-macro-box">
+                    <span class="staged-macro-label">Fiber</span>
+                    <input type="number" step="0.5" class="staged-macro-num" value="${item.fiber}" onchange="updateStagedItem(${index}, 'fiber', parseFloat(this.value)||0)">
+                </div>
+            </div>
         `;
-        tbody.appendChild(tr);
+        wrapper.appendChild(card);
     });
 }
 
@@ -394,7 +518,6 @@ function updateMacroCard(key, current, target, unit) {
     const pct = Math.round((current / (target || 1)) * 100);
     targetEl.textContent = `Goal: ${target} ${unit} (${pct}%)`;
 
-    // Green progress bar fill
     fillEl.style.width = `${Math.min(100, pct)}%`;
 }
 
@@ -503,7 +626,6 @@ function renderPnLCalendar(data) {
     const grid = document.getElementById('pnl-calendar-grid');
     grid.innerHTML = '';
 
-    // Day of week headers
     const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
     weekdays.forEach(wd => {
         const h = document.createElement('div');
@@ -512,9 +634,8 @@ function renderPnLCalendar(data) {
         grid.appendChild(h);
     });
 
-    // Pad days before 1st of month
     if (data.days.length > 0) {
-        const firstDayWeekday = data.days[0].weekday; // 0=Mon, 6=Sun
+        const firstDayWeekday = data.days[0].weekday;
         for (let i = 0; i < firstDayWeekday; i++) {
             const pad = document.createElement('div');
             pad.style.opacity = '0.2';
@@ -522,7 +643,6 @@ function renderPnLCalendar(data) {
         }
     }
 
-    // Render days
     data.days.forEach(d => {
         const dayCell = document.createElement('div');
         dayCell.className = `pnl-day ${d.status}`;
@@ -542,7 +662,6 @@ function renderPnLCalendar(data) {
             state.selectedDate = d.date;
             document.getElementById('date-picker').value = d.date;
             updateDateLabel();
-            // Switch to daily tab
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             document.querySelector('.nav-btn[data-tab="daily"]').classList.add('active');
             document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
@@ -630,32 +749,17 @@ function renderWeeklyAnalytics(data) {
     data.days.forEach(d => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><strong>${d.day_name}</strong> (${d.date.slice(5)})</td>
-            <td>${d.meal_count}</td>
-            <td>${d.totals.calories}</td>
-            <td style="font-weight: 700; color: var(--accent-cyan);">${d.totals.protein}g</td>
-            <td>${d.totals.carbs}g</td>
-            <td>${d.totals.fat}g</td>
-            <td>${d.totals.sodium}mg</td>
-            <td>${d.totals.fiber}g</td>
+            <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);"><strong>${d.day_name}</strong> (${d.date.slice(5)})</td>
+            <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">${d.meal_count}</td>
+            <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">${d.totals.calories}</td>
+            <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color); font-weight: 700; color: var(--accent-cyan);">${d.totals.protein}g</td>
+            <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">${d.totals.carbs}g</td>
+            <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">${d.totals.fat}g</td>
+            <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">${d.totals.sodium}mg</td>
+            <td style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">${d.totals.fiber}g</td>
         `;
         tbody.appendChild(tr);
     });
-
-    const avgTr = document.createElement('tr');
-    avgTr.style.backgroundColor = '#171717';
-    avgTr.style.fontWeight = 'bold';
-    avgTr.innerHTML = `
-        <td>7-Day Average</td>
-        <td>-</td>
-        <td>${avgs.calories}</td>
-        <td style="color: var(--accent-cyan);">${avgs.protein}g</td>
-        <td>${avgs.carbs}g</td>
-        <td>${avgs.fat}g</td>
-        <td>${avgs.sodium}mg</td>
-        <td>${avgs.fiber}g</td>
-    `;
-    tbody.appendChild(avgTr);
 }
 
 // Goal Coach Logic
@@ -686,7 +790,7 @@ function calculateCoachTargets() {
     else if (goal === 'aggressive_bulk') targetCal += 500;
 
     targetCal = Math.round(Math.max(1200, targetCal));
-    let targetP = Math.round(weight * 1.05); // ~1.05g/lb
+    let targetP = Math.round(weight * 1.05);
     let targetF = Math.round((targetCal * 0.25) / 9);
     let remainingCal = targetCal - (targetP * 4 + targetF * 9);
     let targetC = Math.round(Math.max(50, remainingCal / 4));

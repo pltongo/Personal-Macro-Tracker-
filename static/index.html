@@ -8,7 +8,7 @@
 </head>
 <body>
 
-  <!-- Minimalist Header (Branding removed) -->
+  <!-- Minimalist Header (Always at the TOP on Desktop and Mobile) -->
   <header class="app-header">
     <div class="header-container">
       <nav class="nav-tabs">
@@ -95,11 +95,10 @@
         </div>
       </div>
 
-      <!-- Quick Log Meal Card (No meal type dropdown) -->
+      <!-- Quick Log Meal Card (Quick Log Food Card) -->
       <div class="card-section">
         <div class="section-title">
           <span>Log Food</span>
-          <span id="pdt-clock-indicator" style="font-size: 0.85rem; color: var(--accent-cyan); font-weight: 600;">Time: Auto (PDT)</span>
         </div>
 
         <div class="input-mode-tabs">
@@ -114,26 +113,21 @@
           <textarea id="meal-description" class="form-textarea" placeholder="e.g. 8oz chicken breast, 1.5 cups jasmine rice, 1 cup steamed broccoli, and 1 tbsp olive oil"></textarea>
         </div>
 
-        <!-- Photo Upload Mode (Camera + Photo Library Separate for iPhone) -->
+        <!-- Photo Upload Mode (Single button giving native iOS prompt: Take Photo / Photo Library / Choose File) -->
         <div id="photo-input-group" class="form-group" style="display: none;">
           <label class="form-label">Add meal photo:</label>
           <div class="photo-buttons-row">
-            <button id="btn-camera" type="button" class="btn-secondary">
-              <span>📷 Take Photo</span>
+            <button id="btn-photo-pick" type="button" class="btn-secondary">
+              <span>🖼️ Add Meal Photo (Camera / Library)</span>
             </button>
-            <button id="btn-library" type="button" class="btn-secondary">
-              <span>🖼️ Photo Library</span>
-            </button>
-            <!-- Camera forced input -->
-            <input type="file" id="camera-file-input" accept="image/*" capture="environment" style="display: none;">
-            <!-- Gallery / library input (no capture attribute) -->
-            <input type="file" id="library-file-input" accept="image/*" style="display: none;">
+            <!-- Native file input with no forced capture attribute -->
+            <input type="file" id="meal-photo-input" accept="image/*" style="display: none;">
           </div>
           <div id="photo-preview-box" class="preview-container" style="display: none;">
             <img id="photo-preview-img" class="preview-img" alt="Meal Preview">
             <div>
-              <div style="font-weight: 600; font-size: 0.9rem;">Photo Attached</div>
-              <button id="remove-photo-btn" class="icon-btn" style="padding: 4px 10px; font-size: 0.8rem; margin-top: 6px; color: var(--missed-red);">Remove Photo</button>
+              <div style="font-weight: 700; font-size: 0.95rem;">Photo Attached</div>
+              <button id="remove-photo-btn" class="icon-btn" style="padding: 4px 12px; font-size: 0.8rem; margin-top: 6px; color: var(--missed-red);">Remove Photo</button>
             </div>
           </div>
           <div style="margin-top: 10px;">
@@ -142,22 +136,37 @@
           </div>
         </div>
 
-        <!-- Barcode Scanner Mode (Open Food Facts Database) -->
+        <!-- Barcode Scanner Mode (Camera / Photo scan + Open Food Facts Database) -->
         <div id="barcode-input-group" class="form-group" style="display: none;">
-          <label class="form-label">Scan Barcode on Packaged Product:</label>
-          <div class="barcode-box">
-            <input type="text" id="barcode-input" class="form-input" placeholder="Enter or scan 12/13 digit UPC / EAN barcode" style="flex: 1;">
-            <button id="barcode-lookup-btn" type="button" class="btn-primary">
-              <span>🔍 Lookup Product</span>
+          <label class="form-label">Scan Barcode on Product:</label>
+          <div class="barcode-action-group">
+            <button id="btn-barcode-scan-photo" type="button" class="btn-primary">
+              <span>📷 Scan Barcode via Camera / Photo</span>
             </button>
+            <input type="file" id="barcode-file-input" accept="image/*" style="display: none;">
           </div>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">
-            Queries verified nutritional data for millions of packaged items from Open Food Facts.
-          </p>
+
+          <!-- Video Camera Stream Container (Live Scanner) -->
+          <div id="scanner-container" style="display: none; margin-top: 14px; position: relative; max-width: 480px;">
+            <video id="barcode-video" playsinline style="width: 100%; border-radius: 8px; border: 2px solid var(--accent-cyan);"></video>
+            <div style="position: absolute; top: 10px; right: 10px;">
+              <button id="stop-scanner-btn" type="button" class="icon-btn" style="background: rgba(0,0,0,0.8);">✕ Close Camera</button>
+            </div>
+          </div>
+
+          <div style="margin-top: 14px;">
+            <label class="form-label" style="font-size: 0.8rem;">Or enter code manually if preferred:</label>
+            <div style="display: flex; gap: 8px; margin-top: 4px;">
+              <input type="text" id="barcode-input" class="form-input" placeholder="e.g. 073420000114" style="flex: 1;">
+              <button id="barcode-lookup-btn" type="button" class="btn-secondary">
+                <span>Search</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Action Bar -->
-        <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
+        <div style="display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap;">
           <button id="estimate-btn" class="btn-primary">
             <span>✨ Estimate & Review</span>
           </button>
@@ -166,30 +175,17 @@
           </button>
         </div>
 
-        <!-- Staged Editable Items Table -->
-        <div id="staged-items-container" style="display: none; margin-top: 20px;">
-          <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 8px; color: var(--text-primary);">
+        <!-- Staged Items: Seamless Midnight Cards (No Overflowing White Table!) -->
+        <div id="staged-items-container" style="display: none; margin-top: 24px;">
+          <div style="font-weight: 800; font-size: 1rem; margin-bottom: 12px; color: var(--text-primary);">
             Review & Adjust Items:
           </div>
-          <div class="items-table-wrapper">
-            <table class="items-table">
-              <thead>
-                <tr>
-                  <th>Food Item</th>
-                  <th>Portion</th>
-                  <th>Calories</th>
-                  <th>Protein (g)</th>
-                  <th>Carbs (g)</th>
-                  <th>Fat (g)</th>
-                  <th>Sodium (mg)</th>
-                  <th>Fiber (g)</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="staged-items-tbody"></tbody>
-            </table>
+          
+          <div id="staged-cards-wrapper">
+            <!-- Populated with clean seamless cards by JavaScript -->
           </div>
-          <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+
+          <div style="display: flex; justify-content: flex-end; margin-top: 14px;">
             <button id="save-staged-btn" class="btn-success">
               <span>💾 Log to Timeline</span>
             </button>
@@ -197,7 +193,7 @@
         </div>
       </div>
 
-      <!-- 24-Hour Chronological PDT Timeline (Replaces Breakfast/Lunch/Dinner) -->
+      <!-- 24-Hour Chronological PDT Timeline -->
       <div class="card-section">
         <div class="section-title">
           <span>24-Hour Meal Timeline (PDT)</span>
@@ -288,18 +284,18 @@
         <div class="section-title">
           <span>Full Week Daily Breakdown</span>
         </div>
-        <div class="items-table-wrapper">
-          <table class="items-table">
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
             <thead>
-              <tr>
-                <th>Day</th>
-                <th>Meals</th>
-                <th>Calories</th>
-                <th>Protein</th>
-                <th>Carbs</th>
-                <th>Fat</th>
-                <th>Sodium</th>
-                <th>Fiber</th>
+              <tr style="background: #141414; color: var(--text-secondary);">
+                <th style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">Day</th>
+                <th style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">Meals</th>
+                <th style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">Calories</th>
+                <th style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">Protein</th>
+                <th style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">Carbs</th>
+                <th style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">Fat</th>
+                <th style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">Sodium</th>
+                <th style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">Fiber</th>
               </tr>
             </thead>
             <tbody id="weekly-table-tbody">

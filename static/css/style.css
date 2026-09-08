@@ -2,19 +2,20 @@
   --bg-primary: #000000;
   --bg-secondary: #080808;
   --bg-card: #0d0d0d;
-  --bg-hover: #141414;
+  --bg-input: #141414;
+  --bg-hover: #1c1c1c;
   --text-primary: #ffffff;
-  --text-secondary: #9ca3af;
-  --text-muted: #525252;
-  --border-color: #1f1f1f;
-  --border-focus: #333333;
+  --text-secondary: #a3a3a3;
+  --text-muted: #666666;
+  --border-color: #222222;
+  --border-focus: #444444;
   --accent-cyan: #00e5ff;
   --accent-cyan-glow: rgba(0, 229, 255, 0.25);
   --success-green: #10b981;
   --success-bg: rgba(16, 185, 129, 0.15);
   --missed-red: #ef4444;
   --missed-bg: rgba(239, 68, 68, 0.15);
-  --untracked-grey: #171717;
+  --untracked-grey: #141414;
   --radius: 12px;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
@@ -32,10 +33,10 @@ body {
   color: var(--text-primary);
   line-height: 1.5;
   min-height: 100vh;
-  padding-bottom: 80px;
+  padding-bottom: 40px;
 }
 
-/* Minimalist App Header (No branding logo/text) */
+/* Minimalist App Header (Always at the TOP on Desktop and Mobile) */
 .app-header {
   background-color: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
@@ -46,7 +47,7 @@ body {
 }
 
 .header-container {
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -56,26 +57,27 @@ body {
 .nav-tabs {
   display: flex;
   background-color: var(--bg-secondary);
-  padding: 4px;
+  padding: 6px;
   border-radius: 30px;
-  gap: 4px;
+  gap: 6px;
   border: 1px solid var(--border-color);
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .nav-btn {
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  padding: 8px 18px;
+  padding: 10px 22px;
   border-radius: 20px;
-  font-size: 0.88rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .nav-btn.active {
@@ -84,11 +86,12 @@ body {
   box-shadow: 0 0 16px var(--accent-cyan-glow);
 }
 
-/* Main Container */
+/* Main Container - Widened to 1600px (fills desktop space seamlessly) */
 .main-content {
-  max-width: 1200px;
+  max-width: 1600px;
+  width: 96%;
   margin: 24px auto;
-  padding: 0 16px;
+  padding: 0 12px;
 }
 
 /* Date Navigator Bar: Date on LEFT, controls on RIGHT */
@@ -99,14 +102,14 @@ body {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
-  padding: 14px 20px;
-  margin-bottom: 20px;
+  padding: 16px 24px;
+  margin-bottom: 24px;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
 }
 
 .date-display {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 800;
   color: var(--text-primary);
   letter-spacing: -0.02em;
@@ -115,34 +118,35 @@ body {
 .date-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .icon-btn {
-  background: #121212;
+  background: var(--bg-input);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
-  padding: 7px 14px;
+  padding: 9px 16px;
   border-radius: 8px;
   cursor: pointer;
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: 700;
+  font-size: 0.95rem;
   transition: all 0.2s;
 }
 
 .icon-btn:hover {
-  background: #1f1f1f;
-  border-color: #333333;
+  background: var(--bg-hover);
+  border-color: #444444;
 }
 
 .date-picker-input {
-  background: #121212;
+  background: var(--bg-input);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
-  padding: 6px 10px;
+  padding: 8px 12px;
   border-radius: 8px;
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   cursor: pointer;
 }
 
@@ -151,11 +155,11 @@ body {
   border-color: var(--accent-cyan);
 }
 
-/* Monochrome Midnight Macro Cards */
+/* Macro Cards Grid (Wide & Expansive) */
 .macro-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
   margin-bottom: 24px;
 }
 
@@ -163,7 +167,7 @@ body {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -171,25 +175,26 @@ body {
 }
 
 .macro-card:hover {
-  border-color: #333333;
+  border-color: #383838;
 }
 
 .macro-title {
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 800;
   text-transform: uppercase;
   color: var(--text-secondary);
   letter-spacing: 0.05em;
 }
 
 .macro-val {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 800;
   color: var(--text-primary);
+  margin: 2px 0;
 }
 
 .macro-target {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   color: var(--text-muted);
 }
 
@@ -215,14 +220,14 @@ body {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
-  padding: 22px;
+  padding: 24px;
   margin-bottom: 24px;
 }
 
 .section-title {
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 800;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -232,19 +237,19 @@ body {
 /* Input Mode Switcher */
 .input-mode-tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 18px;
   flex-wrap: wrap;
 }
 
 .mode-btn {
-  background: #121212;
+  background: var(--bg-input);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
-  padding: 8px 16px;
+  padding: 10px 18px;
   border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -258,20 +263,22 @@ body {
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  width: 100%;
 }
 
 .form-label {
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.88rem;
+  font-weight: 700;
   color: var(--text-secondary);
 }
 
 .form-input, .form-select, .form-textarea {
-  background-color: #121212;
+  width: 100%;
+  background-color: var(--bg-input);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-radius: 8px;
   font-family: inherit;
   font-size: 0.95rem;
@@ -285,7 +292,7 @@ body {
 
 .form-textarea {
   resize: vertical;
-  min-height: 80px;
+  min-height: 90px;
 }
 
 /* Buttons */
@@ -293,46 +300,29 @@ body {
   background-color: var(--accent-cyan);
   color: #000000;
   border: none;
-  padding: 10px 22px;
+  padding: 12px 24px;
   border-radius: 20px;
-  font-size: 0.92rem;
-  font-weight: 700;
+  font-size: 0.95rem;
+  font-weight: 800;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   transition: all 0.2s;
-  box-shadow: 0 0 14px var(--accent-cyan-glow);
+  box-shadow: 0 0 16px var(--accent-cyan-glow);
 }
 
 .btn-primary:hover {
   background-color: #33ebff;
-  box-shadow: 0 0 20px var(--accent-cyan-glow);
+  box-shadow: 0 0 22px var(--accent-cyan-glow);
 }
 
 .btn-secondary {
-  background-color: #141414;
+  background-color: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
-  padding: 10px 20px;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-  background-color: #1f1f1f;
-  border-color: #333333;
-}
-
-.btn-success {
-  background-color: var(--success-green);
-  color: #000000;
-  border: none;
-  padding: 10px 22px;
+  padding: 12px 22px;
   border-radius: 20px;
   font-size: 0.92rem;
   font-weight: 700;
@@ -340,113 +330,188 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 0 14px rgba(16, 185, 129, 0.3);
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: var(--bg-hover);
+  border-color: #444444;
+}
+
+.btn-success {
+  background-color: var(--success-green);
+  color: #000000;
+  border: none;
+  padding: 12px 26px;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.35);
 }
 
 .btn-success:hover {
   background-color: #34d399;
 }
 
-/* Photo & Camera Input */
-.photo-buttons-row {
-  display: flex;
-  gap: 10px;
+/* ============================================================== */
+/* SEAMLESS MIDNIGHT STAGED ITEMS (No Overflowing White Boxes!) */
+/* ============================================================== */
+.staged-card {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px;
   margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.staged-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
-.preview-container {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-top: 10px;
-  padding: 10px;
-  background: #141414;
-  border-radius: 8px;
+.staged-name-input {
+  flex: 1;
+  min-width: 180px;
+  background-color: #0d0d0d;
+  border: 1px solid var(--border-color);
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 
-.preview-img {
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 6px;
+.staged-portion-input {
+  width: 110px;
+  background-color: #0d0d0d;
   border: 1px solid var(--border-color);
+  color: #a3a3a3;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+}
+
+.staged-macros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(85px, 1fr));
+  gap: 8px;
+}
+
+.staged-macro-box {
+  display: flex;
+  flex-direction: column;
+  background-color: #080808;
+  border: 1px solid var(--border-color);
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.staged-macro-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.staged-macro-num {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  outline: none;
+}
+
+.staged-macro-num:focus {
+  color: var(--accent-cyan);
 }
 
 /* Barcode Box */
-.barcode-box {
+.barcode-action-group {
   display: flex;
-  gap: 10px;
-  align-items: center;
+  gap: 12px;
   margin-top: 10px;
+  flex-wrap: wrap;
 }
 
 /* 24-Hour PDT Chronological Timeline */
 .timeline-container {
   position: relative;
-  padding-left: 20px;
-  margin-top: 16px;
+  padding-left: 24px;
+  margin-top: 18px;
 }
 
 .timeline-container::before {
   content: "";
   position: absolute;
-  top: 10px;
-  bottom: 10px;
-  left: 6px;
+  top: 12px;
+  bottom: 12px;
+  left: 7px;
   width: 2px;
   background-color: #1f1f1f;
 }
 
 .timeline-entry {
   position: relative;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
   padding-left: 20px;
 }
 
 .timeline-dot {
   position: absolute;
-  left: -20px;
-  top: 12px;
+  left: -23px;
+  top: 14px;
   width: 12px;
   height: 12px;
   border-radius: 50%;
   background-color: var(--accent-cyan);
-  box-shadow: 0 0 10px var(--accent-cyan);
+  box-shadow: 0 0 12px var(--accent-cyan);
   border: 2px solid #000000;
 }
 
 .timeline-card {
-  background-color: #121212;
+  background-color: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
-  padding: 14px 18px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
 }
 
 .timeline-time-badge {
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 800;
   color: var(--accent-cyan);
   background: rgba(0, 229, 255, 0.1);
-  padding: 3px 8px;
+  padding: 3px 9px;
   border-radius: 6px;
-  border: 1px solid rgba(0, 229, 255, 0.2);
+  border: 1px solid rgba(0, 229, 255, 0.25);
   display: inline-block;
   margin-bottom: 4px;
 }
 
 .meal-name {
-  font-weight: 700;
-  font-size: 1rem;
+  font-weight: 800;
+  font-size: 1.05rem;
 }
 
 .meal-portion {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   color: var(--text-muted);
 }
 
@@ -458,9 +523,9 @@ body {
 }
 
 .badge {
-  padding: 3px 8px;
+  padding: 4px 9px;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   font-weight: 700;
   background: #1c1c1c;
   color: #e5e5e5;
@@ -469,7 +534,8 @@ body {
 
 .badge.p-badge {
   color: var(--accent-cyan);
-  border-color: rgba(0, 229, 255, 0.3);
+  border-color: rgba(0, 229, 255, 0.35);
+  background: rgba(0, 229, 255, 0.08);
 }
 
 .delete-btn {
@@ -479,7 +545,7 @@ body {
   cursor: pointer;
   padding: 6px;
   border-radius: 4px;
-  font-size: 1rem;
+  font-size: 1.1rem;
   transition: color 0.2s;
 }
 
@@ -487,9 +553,7 @@ body {
   color: var(--missed-red);
 }
 
-/* ============================================================== */
 /* PnL Trading-Style Protein Goal Calendar */
-/* ============================================================== */
 .pnl-calendar-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -502,22 +566,22 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
 }
 
 .pnl-month-title {
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
 
 .pnl-legend {
   display: flex;
-  gap: 16px;
+  gap: 18px;
   align-items: center;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
 }
 
@@ -531,26 +595,26 @@ body {
 
 .legend-dot.hit { background-color: var(--success-green); }
 .legend-dot.missed { background-color: var(--missed-red); }
-.legend-dot.untracked { background-color: #262626; }
+.legend-dot.untracked { background-color: #222222; }
 
 .pnl-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
+  gap: 10px;
 }
 
 .pnl-weekday {
   text-align: center;
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 800;
   color: var(--text-muted);
-  padding: 6px 0;
+  padding: 8px 0;
 }
 
 .pnl-day {
-  min-height: 64px;
+  min-height: 74px;
   border-radius: 8px;
-  padding: 8px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -582,52 +646,14 @@ body {
 }
 
 .pnl-day-num {
-  font-weight: 700;
-  font-size: 0.95rem;
+  font-weight: 800;
+  font-size: 1rem;
 }
 
 .pnl-day-status {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 700;
   text-align: right;
-}
-
-/* Goal Coach Section */
-.goal-calc-box {
-  background: #121212;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  padding: 20px;
-  margin-top: 14px;
-}
-
-.goal-preview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 10px;
-  margin: 16px 0;
-}
-
-.goal-stat {
-  background: #0a0a0a;
-  border: 1px solid var(--border-color);
-  padding: 12px;
-  border-radius: 8px;
-  text-align: center;
-}
-
-.goal-stat-label {
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  font-weight: 700;
-}
-
-.goal-stat-val {
-  font-size: 1.3rem;
-  font-weight: 800;
-  color: #ffffff;
-  margin-top: 4px;
 }
 
 /* Toast */
@@ -637,43 +663,69 @@ body {
   right: 24px;
   background-color: var(--success-green);
   color: #000000;
-  padding: 12px 22px;
+  padding: 12px 24px;
   border-radius: 20px;
-  font-weight: 700;
+  font-weight: 800;
   box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
   display: none;
   z-index: 999;
 }
 
-/* Mobile Responsiveness */
-@media (max-width: 640px) {
+/* ============================================================== */
+/* MOBILE RESPONSIVENESS: SECTIONS AT THE TOP & COMFORTABLE TOUCH */
+/* ============================================================== */
+@media (max-width: 768px) {
+  /* Keep nav bar AT THE VERY TOP on mobile */
+  .app-header {
+    position: sticky;
+    top: 0;
+    padding: 10px 8px;
+    z-index: 200;
+  }
   .nav-tabs {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-    border-bottom: none;
-    justify-content: space-around;
-    padding: 8px 4px;
-    z-index: 100;
-    background-color: #080808;
+    width: 100%;
+    border-radius: 12px;
+    display: flex;
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding: 4px;
+    gap: 4px;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
   }
   .nav-btn {
-    font-size: 0.72rem;
-    padding: 6px 10px;
-    border-radius: 12px;
+    padding: 12px 16px; /* BIGGER and easier to tap on phone! */
+    font-size: 0.95rem;
+    flex-shrink: 0;
+  }
+  .main-content {
+    width: 100%;
+    padding: 0 8px;
+    margin: 12px auto;
   }
   .date-bar {
-    flex-direction: column;
-    align-items: flex-start;
+    padding: 12px 14px;
+  }
+  .date-display {
+    font-size: 1.15rem;
+  }
+  .macro-grid {
+    grid-template-columns: repeat(2, 1fr); /* 2 columns on phone */
+    gap: 8px;
+  }
+  .macro-card {
+    padding: 12px;
+  }
+  .macro-val {
+    font-size: 1.35rem;
+  }
+  .staged-macros-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
   .pnl-day {
-    min-height: 50px;
-    padding: 4px;
+    min-height: 52px;
+    padding: 6px;
   }
-  .pnl-day-num { font-size: 0.8rem; }
-  .pnl-day-status { font-size: 0.65rem; }
+  .pnl-day-num { font-size: 0.85rem; }
+  .pnl-day-status { font-size: 0.68rem; }
 }
