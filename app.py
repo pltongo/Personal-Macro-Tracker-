@@ -705,5 +705,4 @@ def run_server(port=PORT):
         httpd.server_close()
 
 if __name__ == "__main__":
-    init_db()
-    print("Database and Server initialized successfully.")
+    run_server(PORT)
