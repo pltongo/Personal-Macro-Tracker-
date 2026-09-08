@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "MacroTracker Mobile",
+    "slug": "macro-tracker-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0f172a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.macrotracker.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "MacroTracker needs camera access to capture meal photos.",
+        "NSPhotoLibraryUsageDescription": "MacroTracker needs photo library access to upload meal images."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0f172a"
+      },
+      "package": "com.macrotracker.mobile",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    }
+  }
+}

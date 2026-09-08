@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MacroTracker Pro - Daily Macro & Nutrition Dashboard</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- Top App Navigation Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon">🥗</div>
+        <span>MacroTracker</span>
+      </div>
+
+      <nav class="nav-tabs">
+        <button class="nav-btn active" data-tab="daily">
+          <span>📅</span>
+          <span>Daily Tracker</span>
+        </button>
+        <button class="nav-btn" data-tab="weekly">
+          <span>📊</span>
+          <span>Weekly Averages</span>
+        </button>
+        <button class="nav-btn" data-tab="settings">
+          <span>⚙️</span>
+          <span>Custom Goals</span>
+        </button>
+      </nav>
+
+      <button id="theme-toggle-btn" class="theme-toggle" title="Toggle Theme">☀️</button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+
+    <!-- ============================================================== -->
+    <!-- TAB 1: DAILY TRACKER -->
+    <!-- ============================================================== -->
+    <section id="tab-daily" class="tab-pane">
+
+      <!-- Date Navigator Bar -->
+      <div class="date-bar">
+        <div class="date-controls">
+          <button id="prev-day-btn" class="icon-btn" title="Previous Day">◀</button>
+          <button id="today-btn" class="icon-btn">Today</button>
+          <button id="next-day-btn" class="icon-btn" title="Next Day">▶</button>
+        </div>
+        <div id="current-date-label" class="date-display">Loading...</div>
+        <div>
+          <input type="date" id="date-picker" class="date-picker-input">
+        </div>
+      </div>
+
+      <!-- Macro Summary Cards Grid -->
+      <div class="macro-grid">
+        <div class="macro-card calories">
+          <div class="macro-title">Calories</div>
+          <div class="macro-val">0 kcal</div>
+          <div class="macro-target">Goal: 2400 kcal</div>
+          <div class="progress-track"><div class="progress-fill" style="width: 0%;"></div></div>
+        </div>
+        <div class="macro-card protein">
+          <div class="macro-title">Protein</div>
+          <div class="macro-val">0 g</div>
+          <div class="macro-target">Goal: 175 g</div>
+          <div class="progress-track"><div class="progress-fill" style="width: 0%;"></div></div>
+        </div>
+        <div class="macro-card carbs">
+          <div class="macro-title">Carbohydrates</div>
+          <div class="macro-val">0 g</div>
+          <div class="macro-target">Goal: 260 g</div>
+          <div class="progress-track"><div class="progress-fill" style="width: 0%;"></div></div>
+        </div>
+        <div class="macro-card fat">
+          <div class="macro-title">Total Fat</div>
+          <div class="macro-val">0 g</div>
+          <div class="macro-target">Goal: 70 g</div>
+          <div class="progress-track"><div class="progress-fill" style="width: 0%;"></div></div>
+        </div>
+        <div class="macro-card sodium">
+          <div class="macro-title">Sodium</div>
+          <div class="macro-val">0 mg</div>
+          <div class="macro-target">Goal: 2300 mg</div>
+          <div class="progress-track"><div class="progress-fill" style="width: 0%;"></div></div>
+        </div>
+        <div class="macro-card fiber">
+          <div class="macro-title">Dietary Fiber</div>
+          <div class="macro-val">0 g</div>
+          <div class="macro-target">Goal: 35 g</div>
+          <div class="progress-track"><div class="progress-fill" style="width: 0%;"></div></div>
+        </div>
+      </div>
+
+      <!-- Quick Log Meal Card -->
+      <div class="card-section">
+        <div class="section-title">
+          <span>Log Meal or Snack</span>
+          <div class="form-group" style="margin: 0; min-width: 140px;">
+            <select id="meal-type-select" class="form-select" style="padding: 6px 10px;">
+              <option value="Breakfast">Breakfast</option>
+              <option value="Lunch" selected>Lunch</option>
+              <option value="Dinner">Dinner</option>
+              <option value="Snacks">Snack</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="input-mode-tabs">
+          <button class="mode-btn active" data-mode="text">💬 Text Description</button>
+          <button class="mode-btn" data-mode="photo">📷 Photo / Camera</button>
+        </div>
+
+        <!-- Text Input Mode -->
+        <div id="text-input-group" class="form-group">
+          <label class="form-label">Describe foods, portions, or ingredients:</label>
+          <textarea id="meal-description" class="form-textarea" placeholder="e.g. 8oz chicken breast, 1.5 cups jasmine rice, 1 cup steamed broccoli, and 1 tbsp olive oil"></textarea>
+        </div>
+
+        <!-- Photo Upload Mode -->
+        <div id="photo-input-group" class="form-group" style="display: none;">
+          <label class="form-label">Snap or upload a photo of your meal:</label>
+          <div id="photo-dropzone" class="photo-dropzone">
+            <div style="font-size: 2rem; margin-bottom: 6px;">📸</div>
+            <div style="font-weight: 600;">Tap to snap a photo or choose an image</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Supports camera capture on mobile & file select on desktop</div>
+            <input type="file" id="meal-photo-input" accept="image/*" capture="environment" style="display: none;">
+          </div>
+          <div id="photo-preview-box" class="preview-container" style="display: none;">
+            <img id="photo-preview-img" class="preview-img" alt="Meal Preview">
+            <div>
+              <div style="font-weight: 600; font-size: 0.9rem;">Photo Attached</div>
+              <button id="remove-photo-btn" class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem; margin-top: 6px;">Remove Photo</button>
+            </div>
+          </div>
+          <div style="margin-top: 10px;">
+            <label class="form-label">Optional notes / description for the photo:</label>
+            <input type="text" id="photo-description" class="form-input" placeholder="e.g. Salmon fillet with roasted sweet potato">
+          </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
+          <button id="estimate-btn" class="btn-primary">
+            <span>✨ Smart Estimate Nutrition</span>
+          </button>
+          <button id="add-manual-item-btn" class="btn-secondary">
+            <span>➕ Add Item Manually</span>
+          </button>
+        </div>
+
+        <!-- Staged Editable Items Table -->
+        <div id="staged-items-container" style="display: none; margin-top: 20px;">
+          <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 8px; color: var(--text-primary);">
+            Review & Adjust Estimated Items:
+          </div>
+          <div class="items-table-wrapper">
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Food Item</th>
+                  <th>Portion</th>
+                  <th>Calories</th>
+                  <th>Protein (g)</th>
+                  <th>Carbs (g)</th>
+                  <th>Fat (g)</th>
+                  <th>Sodium (mg)</th>
+                  <th>Fiber (g)</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="staged-items-tbody"></tbody>
+            </table>
+          </div>
+          <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+            <button id="save-staged-btn" class="btn-primary" style="background-color: var(--success);">
+              <span>💾 Save to Today's Log</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Today's Logged Meals -->
+      <div class="card-section">
+        <div class="section-title">
+          <span>Today's Logged Meals</span>
+        </div>
+        <div id="daily-meals-list">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- TAB 2: WEEKLY ANALYTICS & AVERAGES -->
+    <!-- ============================================================== -->
+    <section id="tab-weekly" class="tab-pane" style="display: none;">
+
+      <!-- Week Header Banner -->
+      <div class="week-summary-banner">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <h2 style="font-size: 1.3rem; font-weight: 800;">End-of-Week Macro Averages</h2>
+            <div id="weekly-range-label" style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 2px;">
+              Loading week range...
+            </div>
+          </div>
+          <div id="weekly-active-days" style="font-weight: 700; font-size: 0.9rem; background: var(--bg-card); border: 1px solid var(--border-color); padding: 6px 14px; border-radius: 20px;">
+            0 of 7 days logged
+          </div>
+        </div>
+
+        <!-- 7-Day Average Metric Cards -->
+        <div id="weekly-averages-grid" class="averages-grid">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Weekly Trend Visual Chart -->
+      <div class="card-section">
+        <div class="section-title">
+          <span>Daily Protein Intake Across the Week</span>
+          <span style="font-size: 0.85rem; font-weight: normal; color: var(--text-muted);">Blue bars indicate daily protein (g)</span>
+        </div>
+        <div id="weekly-chart-bars" class="chart-container">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Day by Day Breakdown Table -->
+      <div class="card-section">
+        <div class="section-title">
+          <span>Full Week Daily Breakdown</span>
+        </div>
+        <div class="items-table-wrapper">
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>Day</th>
+                <th>Meals</th>
+                <th>Calories</th>
+                <th>Protein</th>
+                <th>Carbs</th>
+                <th>Fat</th>
+                <th>Sodium</th>
+                <th>Fiber</th>
+              </tr>
+            </thead>
+            <tbody id="weekly-table-tbody">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- TAB 3: CUSTOMIZATION & SETTINGS -->
+    <!-- ============================================================== -->
+    <section id="tab-settings" class="tab-pane" style="display: none;">
+
+      <div class="card-section">
+        <div class="section-title">
+          <span>Custom Macro Targets & Preferences</span>
+        </div>
+        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 20px;">
+          Configure your personal daily macro targets, schedule parameters, and custom tracked nutrients. All daily and weekly averages will automatically adapt to these settings.
+        </p>
+
+        <form id="settings-form">
+          <div class="settings-grid">
+            <div class="form-group">
+              <label class="form-label">Daily Calories Target (kcal):</label>
+              <input type="number" id="set-cal" class="form-input" required min="500" max="10000" step="10">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Daily Protein Target (g):</label>
+              <input type="number" id="set-p" class="form-input" required min="0" max="500" step="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Daily Carbohydrates Target (g):</label>
+              <input type="number" id="set-c" class="form-input" required min="0" max="1000" step="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Daily Total Fat Target (g):</label>
+              <input type="number" id="set-f" class="form-input" required min="0" max="300" step="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Daily Sodium Target (mg):</label>
+              <input type="number" id="set-na" class="form-input" required min="0" max="10000" step="50">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Daily Dietary Fiber Target (g):</label>
+              <input type="number" id="set-fib" class="form-input" required min="0" max="150" step="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Week Start Day:</label>
+              <select id="set-week-start" class="form-select">
+                <option value="Monday">Monday (Standard)</option>
+                <option value="Sunday">Sunday</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 12px; margin-top: 10px;">
+            <button type="submit" class="btn-primary">💾 Save Custom Targets</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Data Export & Portability -->
+      <div class="card-section">
+        <div class="section-title">
+          <span>Data Export & Backup</span>
+        </div>
+        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 16px;">
+          Export your entire meal history and macronutrient logs at any time.
+        </p>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <a href="/api/export?format=csv" download="macro_tracker_export.csv" class="btn-secondary" style="text-decoration: none;">
+            📥 Download CSV Spreadsheet
+          </a>
+          <a href="/api/export?format=json" download="macro_tracker_backup.json" class="btn-secondary" style="text-decoration: none;">
+            📦 Download JSON Backup
+          </a>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Toast Notification Alert -->
+  <div id="toast" class="toast">Saved!</div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
